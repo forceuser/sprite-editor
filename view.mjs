@@ -1,5 +1,6 @@
-import {default as activeData, observable, reaction, updatable} from "//cdn.jsdelivr.net/npm/active-data@2.0.10/src/active-data.js";
+import {default as activeData, observable, reaction, updatable} from "./active-data.mjs";//"//cdn.jsdelivr.net/npm/active-data@2.0.10/src/active-data.js";
 import {default as model, mod} from "./model.mjs";
+import {flattenDeep} from "./common.mjs";
 import classModule from "./class.mjs";
 
 const $patch = snabbdom.init([
@@ -8,9 +9,9 @@ const $patch = snabbdom.init([
 	model,
 ]);
 
-async function getParams (params, key) {
+function getParams (params, key) {
 	params = (typeof params === "function" ? params() : params) || {};
-	params = await params;
+	// params = await params;
 	params.key = key;
 	delete params.hook;
 	return params;
@@ -68,6 +69,7 @@ export function cacheable (toCache) {
 export {observable};
 
 export function h (type, key, params, content) {
+
 	const cache = {
 		data: {},
 		dataNext: {},
@@ -79,7 +81,7 @@ export function h (type, key, params, content) {
 			this.data = this.dataNext;
 		},
 		get (type, key) {
-			this.idx++;
+			this.idx++;			
 			const $key = `${type}:${key}`;
 			const result = this.data[$key];
 			if (result) {
@@ -92,14 +94,52 @@ export function h (type, key, params, content) {
 		}
 	}
 
-	const childH = async (type, key, params, content) => {
+	const childH = (type, key, params, content) => {
 		key = key == null ? `index:${cache.idx + 1}` : key;
-		let vnode = cache.get(type, key);
-		if (!vnode) {
-			vnode = await h(type, key, params, content)(vnode);
-			cache.set(type, key, vnode);
+		let vnode;
+		if (typeof type === "function" && type.prototype instanceof ViewComponent) {
+			const component = type;
+			type = type.name;
+			let instance;
+			vnode = cache.get(type, key);
+			if (!vnode) {
+				let staticParams;
+				let staticContent;
+				if (typeof params === "function") {
+					staticParams = params();
+					reaction(() => {
+						activeData.ignoreWrite = true;
+						instance && instance.setParams(params());
+						activeData.ignoreWrite = false;
+					});
+				}
+				else {
+					staticParams = params;
+				}
+				if (typeof content === "function") {
+					staticContent = content();
+					reaction(() => {
+						activeData.ignoreWrite = true;
+						instance && instance.setContent(content());
+						activeData.ignoreWrite = false;
+					});
+				}
+				else {
+					staticContent = content;
+				}
+				instance = new component(h, key, staticParams, staticContent);
+				vnode = instance.render()(vnode);
+			}			
+		}
+		else {
+			vnode = cache.get(type, key);
+			if (!vnode) {
+				vnode = h(type, key, params, content)(vnode);
+				cache.set(type, key, vnode);
+			}
 		}
 		return vnode;
+
 	}
 
 	let staticContent;
@@ -107,39 +147,39 @@ export function h (type, key, params, content) {
 		staticContent = content;
 	}
 
-	return async vnode => {
+	return vnode => {
 		let isStaticParams = typeof params !== "function";
 
 		const create = (emptyNode, vnode) => {
 			if (typeof content === "function") {
-				let contentVNode = vnode;
-				reaction(async () => {
+				let contentVNode = vnode;				
+				reaction(() => {
 					cache.start();
 					// console.log("patch content", key);
-					let cont = await content(childH);
-					if (Array.isArray(cont)) {
-						cont = await Promise.all(cont);
-					}
+					let cont = content(childH);
+					// if (Array.isArray(cont)) {
+					// 	cont = flattenDeep(cont);						
+					// }
 					contentVNode = $patch(contentVNode, snabbdom.h(type, contentVNode.data, cont));
 					cache.end();
-				});
+				});				
 			}
 			let paramsVNode = vnode;
 			if (!isStaticParams) {
-				reaction(async () => {
-					const p = await getParams(params, key);
+				reaction(() => {
+					const p = getParams(params, key);
 					// console.log("patch params", key);
-					paramsVNode = $patch(paramsVNode, snabbdom.h(type, p, await staticContent));
+					paramsVNode = $patch(paramsVNode, snabbdom.h(type, p, staticContent));
 				});
 			}
 		}
 
 		let $params = {key, hook: {create}};
 		if (params && isStaticParams) {
-			$params = Object.assign($params, await params);
+			$params = Object.assign($params, params);
 		}
 
-		const newVNode = snabbdom.h(type, $params, await staticContent);
+		const newVNode = snabbdom.h(type, $params, staticContent);
 		if (vnode) {
 			vnode = $patch(vnode, newVNode);
 		}
@@ -147,6 +187,26 @@ export function h (type, key, params, content) {
 			vnode = newVNode;
 		}
 		return vnode;
+	}
+}
+
+
+export class ViewComponent {
+	constructor (h, key, params, content) {
+		this.d = observable({});
+		this.key = key;
+		this.d.params = params || {};
+		this.d.content = content;
+		this.render = () => this.view(h, this.d);
+	}
+	setParams (params) {
+		this.d.params = params;		
+	}
+	setContent (content) {
+		this.d.content = content;
+	}
+	view (h, d) {
+		return;
 	}
 }
 

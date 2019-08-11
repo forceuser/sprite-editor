@@ -2,7 +2,7 @@ import {mod} from "./model.mjs";
 import {default as dataStore} from "./data.mjs";
 import {each, clone} from "./common.mjs";
 import {loadDataFromFile, saveDataToFile, crop, roundRect} from "./sprite-editor.mjs";
-import {h, observable, cacheable} from "./view.mjs";
+import {h, observable, cacheable, ViewComponent} from "./view.mjs";
 import {imageToCanvas, loadImage, createCanvas, toDPR, copyCanvas, Rect} from "./graphics.mjs";
 import { openFile, readFile } from "./common.mjs";
 
@@ -15,19 +15,45 @@ function $select(h, title, options, model) {
 	]);
 }
 
-function $input (h, title, model) {
-	return h("label", null, null, h => [
-		h("div", null, null, title),
-		h("input", null, () => ({attrs: {type: "text"}, model})),
-	]);
+
+class $input extends ViewComponent {
+	view (h, d) {
+		return h("label", null, null, h => {
+			console.log("title", d.params.title);
+			return [
+				h("div", null, null, d.params.title),
+				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model})),
+			];		
+		});
+	}
 }
 
-function $range (h, title, min, max, model, step = 1) {
-	return h("label", null, null, h => [
-		h("div", null, null, h => `${title} ${model.get() != null ? `(${model.get()})` : ""}`),
-		h("input", null, () => ({attrs: {type: "range", min, max, step}, model})),
-	]);
+class $range extends ViewComponent {
+	view (h, d) {
+		return h("label", null, null, h => [
+			h("div", null, null, h => `${d.params.title} ${d.params.model.get() != null ? `(${d.params.model.get()})` : ""}`),
+			h("input", null, () => ({attrs: {type: "range", min: d.params.min, max: d.params.max, step: d.params.step}, model: d.params.model})),
+		]);
+	}
 }
+
+
+// function $input (h, title, model) {
+// 	return h("label", "$input", null, h => {
+// 		console.log("title", title);
+// 		return [
+// 			h("div", null, null, title),
+// 			h("input", null, () => ({attrs: {type: "text"}, model})),
+// 		];		
+// 	});
+// }
+
+// function $range (h, title, min, max, model, step = 1) {
+// 	return h("label", "$range", null, h => [
+// 		h("div", null, null, h => `${title} ${model.get() != null ? `(${model.get()})` : ""}`),
+// 		h("input", null, () => ({attrs: {type: "range", min, max, step}, model})),
+// 	]);
+// }
 
 function $button (h, title, click) {
 	return h("button", null, {class: ["button"], attrs: {type: "button"}, on: {click}}, title);
@@ -41,8 +67,8 @@ const schema = {
 		},
 		ui: (h, d) => {
 			return [
-				$range(h, "поворот", 0, 360, mod(d, "rotate")),
-				$range(h, "scale", 0.5, 1.5, mod(d, "scale"), 0.05),
+				// $range(h, "поворот", 0, 360, mod(d, "rotate")),
+				// $range(h, "scale", 0.5, 1.5, mod(d, "scale"), 0.05),
 			]
 		},
 		apply: (filter, canvas, srcImg) => {
@@ -106,7 +132,7 @@ function uiForEditing (h, d) {
 	if (d.editing) {
 		console.log("ui for editing", d.editing);
 		return [
-			...uiForParams(d.editing, h),
+			...uiForParams(d, h),
 			// ...(d.editing.filters || []).map(filter => uiForFilter(filter, h)),
 		];
 	}
@@ -124,11 +150,11 @@ function uiForFilter (filter, h) {
 	return [];
 }
 
-function uiForParams (sprite, h) {
+function uiForParams (d, h) {
 	return [
-		h("section", "params-qq", {class: ["param-section"]}, h => [
-			$range(h, "поворот", 0, 360, mod(sprite, "params.rotate")),
-			$input(h, "url", mod(sprite, "params.url")),
+		h("section", "params-qq", {class: ["param-section"]}, h => [					
+			h($range, null, () => ({title: "поворот", min: -30, max: 30, model: mod(d.editing.params, "rotate")})),
+			h($input, null, () => ({title: "url" + d.editing.params.url, model: mod(d.editing.params, "url")})),
 		])
 	];
 }
@@ -146,8 +172,8 @@ async function applyFilters (d, sprite) {
 		}
 	});
 	const dpr1x = toDPR(canvas, dpr, 1);
-	sprite.dest1x = {name, url: dpr1x.toDataURL("image/png"), w: dpr1x.width, h: dpr1x.height, width: dpr1x.width, height: dpr1x.height};
-	sprite.dest2x = {name, url: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, width: dpr1x.width, height: dpr1x.height};
+	sprite.dest1x = {name: sprite.name, url: dpr1x.toDataURL("image/png"), w: dpr1x.width, h: dpr1x.height, width: dpr1x.width, height: dpr1x.height};
+	sprite.dest2x = {name: sprite.name, url: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, width: dpr1x.width, height: dpr1x.height};
 	d.sprites.index[sprite.name] = sprite;
 };
 

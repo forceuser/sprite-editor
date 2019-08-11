@@ -10,7 +10,19 @@ function factory (mode) {
 			elm.setAttribute("value", vnode.data.value);
 		}
 
-		if (model && !vnode.data.modelData) {
+		if (model) {
+			if (oldVnode && oldVnode.data.modelData) {
+				switch (tagName) {
+					case "select":
+						elm.removeEventListener("change", oldVnode.data.modelData.inputHandler);
+						break;
+					default:
+						elm.removeEventListener("input", oldVnode.data.modelData.inputHandler);
+						break;
+				}
+			}
+			const initial = !vnode.data.modelData;
+
 			vnode.data.modelData = {
 				inputHandler: event => {
 					model.set(elm.value, elm);
@@ -24,10 +36,12 @@ function factory (mode) {
 					elm.addEventListener("input", vnode.data.modelData.inputHandler);
 					break;
 			}
-			let val = model.get(elm);
-			elm.value = val == null ? "" : val;
-			if (tagName === "select" && mode === "create") {
-				elm.dispatchEvent(new Event("change"));
+			if (initial) {
+				let val = model.get(elm);
+				elm.value = val == null ? "" : val;
+				if (tagName === "select" && mode === "create") {
+					elm.dispatchEvent(new Event("change"));
+				}
 			}
 		}
 	}
