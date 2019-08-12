@@ -107,22 +107,18 @@ export function h (type, key, params, content) {
 				let staticContent;
 				if (typeof params === "function") {
 					staticParams = params();
-					reaction(() => {
-						activeData.ignoreWrite = true;
-						instance && instance.setParams(params());
-						activeData.ignoreWrite = false;
-					});
+					reaction(() => {						
+						instance && instance.setParams(params());						
+					}, {ignoreWrite: true});
 				}
 				else {
 					staticParams = params;
 				}
 				if (typeof content === "function") {
 					staticContent = content();
-					reaction(() => {
-						activeData.ignoreWrite = true;
-						instance && instance.setContent(content());
-						activeData.ignoreWrite = false;
-					});
+					reaction(() => {						
+						instance && instance.setContent(content());						
+					}, {ignoreWrite: true});
 				}
 				else {
 					staticContent = content;

@@ -67,7 +67,7 @@ export async function readFile (file, type = "text") {
 			"binaryString": "readAsBinaryString",
 			"dataURL": "readAsDataURL",
 			"text": "readAsText",
-		}[type] || "text"]();
+		}[type] || "readAsText"](file);
 	}
 
 	return deferred.promise;

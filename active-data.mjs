@@ -193,7 +193,7 @@ export class Manager {
 					updatableStatesWatch && updatableStatesWatch.forEach(invalidatorFn);
 				}
 
-				if (!$$.inRunSection && $$.intentToRun === 1 && !manager.ignoreWrite) {
+				if (!$$.inRunSection && $$.intentToRun === 1) {
 					if ($$.options.immediateReaction) {
 						manager.run();
 					}
@@ -301,8 +301,7 @@ export class Manager {
 		if (fn.originalFn) {
 			return fn;
 		}
-		const onInvalidate = settings.onInvalidate;
-		const onUninit = settings.onUninit;
+		const {onInvalidate, onUninit, ignoreWrite} = settings;		
 
 		const manager = this;
 		const $$ = $(manager);
@@ -313,6 +312,7 @@ export class Manager {
 			valid: false,
 			onInvalidate,
 			onUninit,
+			ignoreWrite,
 			value: undefined,
 			deps: new Set(),
 			uninitMap: new Map(),
@@ -349,7 +349,7 @@ export class Manager {
 				updatableState.invalidIteration = false;
 				const value = fn.call(context, context);
 
-				updatableState.valid = !updatableState.invalidIteration; // check if it was invalidated inside call
+				updatableState.valid = updatableState.ignoreWrite ? true : !updatableState.invalidIteration; // check if it was invalidated inside call
 				updatableState.value = value;
 				return value;
 			}
@@ -402,12 +402,13 @@ export class Manager {
 	 * then it will be called on the next tick.
 	 * @return {UpdatableFunction}
 	 */
-	makeReaction (call, run = true) {
+	makeReaction (call, {run = true, ignoreWrite = false} = {}) {
 		const manager = this;
 		const $$ = $(manager);
 		const updatable = manager.makeUpdatable(call, {
 			onInvalidate: () => $$.reactionsToUpdate.add(updatable),
 			onUninit: () => $$.reactionsToUpdate.delete(updatable),
+			ignoreWrite,
 		});
 		if (run) {
             $$.reactionsToUpdate.add(updatable);

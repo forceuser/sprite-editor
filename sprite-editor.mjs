@@ -1,5 +1,5 @@
 import dataStore from "./data.mjs";
-import {openFile, transformKey} from "./common.mjs";
+import {openFile, readFile, transformKey} from "./common.mjs";
 import {createCanvas, loadImage, canvasToFile, copyCanvas, getCrop, Rect, doPadding, normRect, correctRadius} from "./graphics.mjs";
 
 export function resize (canvas, rect) {
@@ -888,8 +888,9 @@ async function run (params = {}) {
 		sprites[name] = {
 			name: file.filename,
 			src: {url: imageToCanvas(img).toDataURL("image/png"), w: img.width, h: img.height},
-			dest1x: {name, url: dpr1x.toDataURL("image/png"), w: dpr1x.width, h: dpr1x.height, width: dpr1x.width, height: dpr1x.height},
-			dest2x: {name, url: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, width: dpr1x.width, height: dpr1x.height},
+			dest1x: {url: dpr1x.toDataURL("image/png"), w: dpr1x.width, h: dpr1x.height, width: dpr1x.width, height: dpr1x.height},
+			dest2x: {url: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, width: dpr1x.width, height: dpr1x.height},
+			params: {},
 		};
 
 		await dataStore.save(sprites);
@@ -927,67 +928,70 @@ async function run (params = {}) {
 
 export async function loadDataFromFile () {
 	const files = await openFile();
-	const zip = await JSZip.loadAsync(files[0]);
-	const str = await zip.file("resources/data/sprites.json").async("string");
+	// const zip = await JSZip.loadAsync(files[0]);
+	// const str = await zip.file("resources/data/sprites.json").async("string");
+	const str = await readFile(files[0]);
 	const sprites = JSON.parse(str);
 	return sprites;
 	
 }
 
 export async function saveDataToFile (sprites) {
-	const zip = new JSZip();
 	const filename = "sprites";
-	const folder = zip.folder("resources");
-	// const folder = zip.folder(filename);
-	// const sprites = await dataStore.load();
-	let css = ``;
-	let html = ``;
-	await [1, 2].reduce(async (result, dpr) => {
-		await result;
-		const boxes = Object.keys(sprites.index).map(name => sprites.index[name][`dest${dpr}x`]);
-		const {w, h, fill} = potpack(boxes);
-		const filename = `partner-sprite@${dpr}x.png`
-		const canvas = createCanvas(w, h);
-		const ctx = canvas.getContext("2d");
-		if (dpr > 1) {
-			css += `\n@media (min-resolution: 192dpi), (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (-o-min-device-pixel-ratio: 2/1), (min-device-pixel-ratio: 2), (min-resolution: 2dppx) {`
-		}
-		css += `\n.sprite-img {background-image: url("../img/partner-sprite/${filename}"); background-repeat: no-repeat;}`;
-		await Object.keys(sprites.index).reduce(async (prev, name) => {
-			await prev;
-			const sprite = sprites.index[name];
-			const box = sprite[`dest${dpr}x`];
-			const img = await loadImage(box.url);
-			css += `\n.sprite-img.sprite-img-${box.name} {
-				background-position: ${w === box.w ? 0 : (box.x / (w - box.w) * 100).toPrecision(5)}% ${h === box.h ? 0 : (box.y / (h - box.h) * 100).toPrecision(5)}%;
-				background-size: ${(w / box.w * 100).toPrecision(5)}% ${(h / box.h * 100).toPrecision(5)}%;
-				width: ${box.width}px;
-				height: ${box.height}px;
-				transform: rotate(${sprite.params.rotate || 0}deg);
-			}`;
-			ctx.drawImage(img, box.x, box.y, box.w, box.h);
-			if (dpr === 1) {
-				html += `\n<a href="${sprite.params.url || "${" + transformKey(`logo-url-${name}`) + `!"#"}`}" class="sprite-img sprite-img-${box.name}" target="_blank" rel="noopener"></a>`;
-			}
-		}, null);
-		if (dpr > 1) {
-			css += `\n}`;
-		}
-		const file = await canvasToFile(canvas, `partner-sprite@${dpr}x.png`);
-		folder.file(`static/dist/img/partner-sprite/${filename}`, file);
-		return result;
-	}, []);
+	// const zip = new JSZip();
+	// const folder = zip.folder("resources");
+	// // const folder = zip.folder(filename);
+	// // const sprites = await dataStore.load();
+	// let css = ``;
+	// let html = ``;
+	// await [1, 2].reduce(async (result, dpr) => {
+	// 	await result;
+	// 	const boxes = Object.keys(sprites.index).map(name => sprites.index[name][`dest${dpr}x`]);
+	// 	const {w, h, fill} = potpack(boxes);
+	// 	const filename = `partner-sprite@${dpr}x.png`
+	// 	const canvas = createCanvas(w, h);
+	// 	const ctx = canvas.getContext("2d");
+	// 	if (dpr > 1) {
+	// 		css += `\n@media (min-resolution: 192dpi), (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (-o-min-device-pixel-ratio: 2/1), (min-device-pixel-ratio: 2), (min-resolution: 2dppx) {`
+	// 	}
+	// 	css += `\n.sprite-img {background-image: url("../img/partner-sprite/${filename}"); background-repeat: no-repeat;}`;
+	// 	await Object.keys(sprites.index).reduce(async (prev, key) => {
+	// 		await prev;
+	// 		const sprite = sprites.index[key];
+	// 		const name = sprite.name;
+	// 		const box = sprite[`dest${dpr}x`];
+	// 		const img = await loadImage(box.url);
+	// 		css += `\n.sprite-img.sprite-img-${name} {
+	// 			background-position: ${w === box.w ? 0 : (box.x / (w - box.w) * 100).toPrecision(5)}% ${h === box.h ? 0 : (box.y / (h - box.h) * 100).toPrecision(5)}%;
+	// 			background-size: ${(w / box.w * 100).toPrecision(5)}% ${(h / box.h * 100).toPrecision(5)}%;
+	// 			width: ${box.width}px;
+	// 			height: ${box.height}px;
+	// 			transform: rotate(${sprite.params.rotate || 0}deg);
+	// 		}`;
+	// 		ctx.drawImage(img, box.x, box.y, box.w, box.h);
+	// 		if (dpr === 1) {
+	// 			html += `\n<a data-logo-category="${sprite.params.category}" href="${sprite.params.url || "${" + transformKey(`logo-url-${name}`) + `!"#"}`}" class="sprite-img sprite-img-${name}" target="_blank" rel="noopener"></a>`;
+	// 		}
+	// 	}, null);
+	// 	if (dpr > 1) {
+	// 		css += `\n}`;
+	// 	}
+	// 	const file = await canvasToFile(canvas, `partner-sprite@${dpr}x.png`);
+	// 	folder.file(`static/dist/img/partner-sprite/${filename}`, file);
+	// 	return result;
+	// }, []);
 
-	folder.file(`data/${filename}.json`, new Blob([JSON.stringify(sprites, null, "\t")], {type: "application/json"}));
-	folder.file(`static/src/less/${filename}.less`, new Blob([css], {type: "text/css"}));
-	folder.file(`templates/chast/${filename}.ftl`, new Blob([html], {type: "text/html"}));
+	// folder.file(`data/${filename}.json`, new Blob([JSON.stringify(sprites, null, "\t")], {type: "application/json"}));
+	// folder.file(`static/src/less/${filename}.less`, new Blob([css], {type: "text/css"}));
+	// folder.file(`templates/chast/${filename}.ftl`, new Blob([html], {type: "text/html"}));
 
-	console.log("==== creating zip file =====");
-	const content = await zip.generateAsync({type: "blob"});
+	// console.log("==== creating zip file =====");
+	// const content = await zip.generateAsync({type: "blob"});
 
+	const content = new Blob([JSON.stringify(sprites, null, "\t")], {type: "application/json"});
 	const url = URL.createObjectURL(content);
 	let a = document.createElement("a");
-	a.setAttribute("download", `${filename}.zip`);
+	a.setAttribute("download", `${filename}.json`);
 	a.setAttribute("href", url);
 	a.click();
 	a = null;
