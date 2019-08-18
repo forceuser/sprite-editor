@@ -66,10 +66,15 @@ export function cacheable (toCache) {
 	return result;
 }
 
-export {observable};
+export {observable, reaction};
 
 export function h (type, key, params, content) {
-
+	if (key != null && typeof key !== "string") {
+		content = params;
+		params = key;
+		key = null;
+	}
+	
 	const cache = {
 		data: {},
 		dataNext: {},
@@ -87,6 +92,7 @@ export function h (type, key, params, content) {
 			if (result) {
 				this.dataNext[$key] = result;
 			}
+			return result;
 		},
 		set (type, key, value) {
 			const $key = `${type}:${key}`;
@@ -95,6 +101,12 @@ export function h (type, key, params, content) {
 	}
 
 	const childH = (type, key, params, content) => {
+		if (key != null && typeof key !== "string") {
+			content = params;
+			params = key;
+			key = null;
+		}
+
 		key = key == null ? `index:${cache.idx + 1}` : key;
 		let vnode;
 		if (typeof type === "function" && type.prototype instanceof ViewComponent) {
@@ -106,25 +118,28 @@ export function h (type, key, params, content) {
 				let staticParams;
 				let staticContent;
 				if (typeof params === "function") {
-					staticParams = params();
-					reaction(() => {						
-						instance && instance.setParams(params());						
-					}, {ignoreWrite: true});
+					// staticParams = params();
+					reaction(() => {			
+						const p = params();						
+						instance && instance.setParams(p);						
+					});
 				}
 				else {
 					staticParams = params;
 				}
 				if (typeof content === "function") {
-					staticContent = content();
-					reaction(() => {						
-						instance && instance.setContent(content());						
-					}, {ignoreWrite: true});
+					// staticContent = content();
+					reaction(() => {	
+						const c = content();						
+						instance && instance.setContent(c);						
+					});
 				}
 				else {
 					staticContent = content;
 				}
 				instance = new component(h, key, staticParams, staticContent);
 				vnode = instance.render()(vnode);
+				cache.set(type, key, vnode);
 			}			
 		}
 		else {
@@ -204,6 +219,22 @@ export class ViewComponent {
 	view (h, d) {
 		return;
 	}
+}
+
+export function classList (...args) {
+	const result = {};
+	args.forEach(arg => {
+		if (typeof arg === "string") {
+			result[arg] = true;
+		}
+		else if (Array.isArray(arg)) {
+			arg.forEach(c => result[c] = true);
+		}
+		else {
+			Object.assign(result, arg);
+		}
+	});
+	return result;
 }
 
 export default h;

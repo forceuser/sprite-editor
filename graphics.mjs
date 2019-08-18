@@ -23,7 +23,7 @@ export function toDPR (canvas, srcDpr = 1, destDpr = 1) {
 	return dst;
 }
 
-function colorDistance (v1, v2) {
+export function colorDistance (v1, v2) {
 	let i;
 	let d = 0;
 	for (i = 0; i < v1.length; i++) {
@@ -34,7 +34,7 @@ function colorDistance (v1, v2) {
 	return result;
 }
 
-function colorAvg (colors) {
+export function colorAvg (colors) {
 	const acc = colors.reduce((acc, i) => {
 		for (let n = 0; n < 4; n++) {
 			acc[n] += i[n];

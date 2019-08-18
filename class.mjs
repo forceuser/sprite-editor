@@ -8,6 +8,14 @@ function updateClass (oldVnode, vnode) {
 	if (oldClass === klass) {return;}
 	oldClass = oldClass || {};
 	klass = klass || {};
+	if (typeof oldClass === "string") {
+		oldClass = {[oldClass]: true};		
+	}
+
+	if (typeof klass === "string") {
+		klass = {[klass]: true};		
+	}
+
 	if (Array.isArray(oldClass)) {
 		oldClass = oldClass.reduce((res, i) => (res[i] = true, res), {});
 	}

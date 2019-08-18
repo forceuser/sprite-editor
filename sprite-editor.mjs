@@ -1,6 +1,6 @@
 import dataStore from "./data.mjs";
-import {openFile, readFile, transformKey} from "./common.mjs";
-import {createCanvas, loadImage, canvasToFile, copyCanvas, getCrop, Rect, doPadding, normRect, correctRadius} from "./graphics.mjs";
+import {openFile, readFile, transformKey, cycle} from "./common.mjs";
+import {createCanvas, loadImage, canvasToFile, copyCanvas, getCrop, Rect, doPadding, normRect, correctRadius, colorToArray, getPoint, setPoint, colorDistance} from "./graphics.mjs";
 
 export function resize (canvas, rect) {
 	const ctx = canvas.getContext("2d");
@@ -15,13 +15,13 @@ export function resize (canvas, rect) {
 	ctx.drawImage(cpy, 0, 0, w, h, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
 }
 
-export function roundRect (canvas, rect, {radius = 0, padding = 0, color = "white", sqare, center, fancyRadius = false, mask = false} = {}) {
+export function roundRect (canvas, rect, {radius = 0, padding = 0, color = "white", square, center, fancyRadius = false, mask = false} = {}) {
 	radius = doPadding(radius);
 	padding = doPadding(padding);
 	rect.width = (rect.width || canvas.width) + padding[1] + padding[3];
 	rect.height =  (rect.height || canvas.height) + padding[0] + padding[2];
 
-	if (sqare) {
+	if (square) {
 		rect.width = Math.max(rect.width, rect.height);
 		rect.height = rect.width;
 	}
@@ -87,8 +87,8 @@ export function growEx (canvas, {size = 0, dpr = 1, smooth = 0, color = "white",
 		const ref = ctx.getImageData(0, 0, canvas.width, canvas.height);
 		for (let y = 0; y < ref.height; y++) {
 			for (let x = 0; x < ref.width; x++) {
-				if (colorDistance(p(x, y, ref, false), chromaKey) < 70) {
-					s(x, y, ref, colorArr);
+				if (colorDistance(getPoint(x, y, ref, false), chromaKey) < 70) {
+					setPoint(x, y, ref, colorArr);
 				}
 			}
 		}
@@ -135,8 +135,8 @@ export function growEx (canvas, {size = 0, dpr = 1, smooth = 0, color = "white",
 			}
 			return {x: Math.round(x / c), y: Math.round(y / c)};
 		};
-		const isp = ({x, y}) => p(x, y, refContour)[0] === 255;
-		const ssp = ({x, y}) => s(x, y, refContour, [255, 0, 0, 255]);
+		const isp = ({x, y}) => getPoint(x, y, refContour)[0] === 255;
+		const ssp = ({x, y}) => setPoint(x, y, refContour, [255, 0, 0, 255]);
 
 		const getContourPoints = ({x, y}) => {
 			const points = [];
@@ -154,7 +154,7 @@ export function growEx (canvas, {size = 0, dpr = 1, smooth = 0, color = "white",
 				for (let i = 0; i < circleLength; i++) {
 					const $idx = cycle(i + idx + shift, circleLength);
 					const t = {x: prevPoint.x + circle[$idx].x, y: prevPoint.y + circle[$idx].y};
-					if ($p(t.x, t.y, ref)[3] > threshold) {
+					if (getPoint(t.x, t.y, ref)[3] > threshold) {
 						point = t;
 						break;
 					}
@@ -173,7 +173,7 @@ export function growEx (canvas, {size = 0, dpr = 1, smooth = 0, color = "white",
 			let prevP;
 			let p;
 			for (let x = 0, w = canvas.width; x < w; x++) {
-				p = $p(x, y, ref);
+				p = getPoint(x, y, ref);
 				if (p[3] > threshold && (!prevP || prevP[3] <= threshold) && !isp({x, y})) {
 					contours.push(getContourPoints({x, y}));
 				}
@@ -213,7 +213,7 @@ export function growEx (canvas, {size = 0, dpr = 1, smooth = 0, color = "white",
 
 			contour.forEach(({x, y}) => {
 				if (removeBorder) {
-					s(x, y, border, [0, 0, 0, 0]);
+					setPoint(x, y, border, [0, 0, 0, 0]);
 				}
 				else {
 					ctx.beginPath();
@@ -270,7 +270,7 @@ export function fill (canvas, fuzz = 100) {
 		for (let j = 0; j < 2; j++) {
 			const x = [0, canvas.width - 1][i];
 			const y = [0, canvas.height - 1][j];
-			const c = p(x, y, ref);
+			const c = getPoint(x, y, ref);
 			if (c[3] < 50 || (i === 1 && j == 1)) {
 				pixelStack.push([x, y]);
 				color = c;
@@ -285,17 +285,17 @@ export function fill (canvas, fuzz = 100) {
 		const x = newPos[0];
 		let y = newPos[1];
 
-		while (y >= 0 && colorDistance(p(x, y, ref), color) < fuzz) {
+		while (y >= 0 && colorDistance(getPoint(x, y, ref), color) < fuzz) {
 			y--;
 		}
 		++y;
 		reachLeft = false;
 		reachRight = false;
-		while (y < h && colorDistance(p(x, y, ref), color) < fuzz) {
-			s(x, y, ref, [122, 122, 122, 0]);
+		while (y < h && colorDistance(getPoint(x, y, ref), color) < fuzz) {
+			setPoint(x, y, ref, [122, 122, 122, 0]);
 
 			if (x > 0) {
-				if (colorDistance(p(x - 1, y, ref), color) < fuzz) {
+				if (colorDistance(getPoint(x - 1, y, ref), color) < fuzz) {
 					if (!reachLeft) {
 						pixelStack.push([x - 1, y]);
 						reachLeft = true;
@@ -307,7 +307,7 @@ export function fill (canvas, fuzz = 100) {
 			}
 
 			if (x < w - 1) {
-				if (colorDistance(p(x + 1, y, ref), color) < fuzz) {
+				if (colorDistance(getPoint(x + 1, y, ref), color) < fuzz) {
 					if (!reachRight) {
 						pixelStack.push([x + 1, y]);
 						reachRight = true;
@@ -322,8 +322,8 @@ export function fill (canvas, fuzz = 100) {
 	}
 	for (let y = 0; y < ref.height; y++) {
 		for (let x = 0; x < ref.width; x++) {
-			if (p(x, y, ref)[3] < 50) {
-				s(x, y, ref, [0, 0, 0, 0]);
+			if (getPoint(x, y, ref)[3] < 50) {
+				setPoint(x, y, ref, [0, 0, 0, 0]);
 			}
 		}
 	}
@@ -367,8 +367,8 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 	const rgbColor = colorToArray(color);
 	const th = 254;
 	const ref = ctx.getImageData(0, 0, canvas.width, canvas.height);
-	const $p = (x, y, ...rest) => p(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
-	const $s = (x, y, ...rest) => s(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
+	const $p = (x, y, ...rest) => getPoint(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
+	const $s = (x, y, ...rest) => setPoint(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
 	let lastx;
 	const fillGap = async (x, y, up = true) => {
 		const stack = [];
@@ -380,12 +380,12 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 		while ($.ad >= 0 && $.ad < $.as) {
 			const st = $.md;
 
-			while (p($.x, $.y, ref)[3] >= th && Math.abs(st - $.md) < (dist || 3)) {
+			while (getPoint($.x, $.y, ref)[3] >= th && Math.abs(st - $.md) < (dist || 3)) {
 				$.md--;
 			}
 
 			let px = 0;
-			while (p($.x, $.y, ref)[3] < th) {
+			while (getPoint($.x, $.y, ref)[3] < th) {
 				$.md--;
 				px++;
 			}
@@ -395,7 +395,7 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 			}
 			$.md++;
 			const start = $.md;
-			while (p($.x, $.y, ref)[3] < th && $.md < $.ms && $.md - start - dist < dst) {
+			while (getPoint($.x, $.y, ref)[3] < th && $.md < $.ms && $.md - start - dist < dst) {
 				$.md++;
 			}
 			if ($.md === $.ms || $.md <= 0) {
@@ -425,7 +425,7 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 		while (stack.length) {
 			const [x1, x2, y] = stack.pop();
 			for (let x = x1 - 1; x <= x2; x++) {
-				s(dir === "h" ? x : y, dir === "h" ? y : x, ref, rgbColor);
+				setPoint(dir === "h" ? x : y, dir === "h" ? y : x, ref, rgbColor);
 			}
 		}
 
@@ -439,8 +439,8 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 		let isWhite = false;
 		for ($.md = 0; $.md < $.ms; $.md++) {
 			const lastIsWhite = isWhite;
-			isWhite = colorDistance(p($.x, $.y, ref), rgbColor) < 10;
-			if (lastIsWhite && p($.x, $.y, ref)[3] < th) {
+			isWhite = colorDistance(getPoint($.x, $.y, ref), rgbColor) < 10;
+			if (lastIsWhite && getPoint($.x, $.y, ref)[3] < th) {
 				boundFromTop = ($.ad >= 0 && $p($.md, $.ad - 1, ref)[3] >= th);
 				boundFromBottom = ($.ad < $.as && $p($.md, $.ad + 1, ref)[3] >= th);
 			}
@@ -453,10 +453,10 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 				}
 			}
 
-			if (lastIsWhite && p($.x, $.y, ref)[3] < th && (boundFromTop || boundFromBottom)) {
+			if (lastIsWhite && getPoint($.x, $.y, ref)[3] < th && (boundFromTop || boundFromBottom)) {
 				lastx = $.md - 1;
 			}
-			else if (lastx != null && p($.x, $.y, ref)[3] >= th) {
+			else if (lastx != null && getPoint($.x, $.y, ref)[3] >= th) {
 				if (lastx >= $.md - 40 && lastx <= $.md && (boundFromTop || boundFromBottom)) {
 					if (dir === "h") {
 						await fillGap($.x - 1, $.y, boundFromBottom);
@@ -478,8 +478,8 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 export async function removeRest (canvas, {dir = "h", threshold = 120} = {}) {
 	const ctx = canvas.getContext("2d");
 	const ref = ctx.getImageData(0, 0, canvas.width, canvas.height);
-	const $p = (x, y, ...rest) => p(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
-	const $s = (x, y, ...rest) => s(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
+	const $p = (x, y, ...rest) => getPoint(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
+	const $s = (x, y, ...rest) => setPoint(dir === "h" ? x : y, dir === "h" ? y : x, ...rest);
 	const $ = createDimObj(0, 0, ref.width, ref.height, dir);
 
 	const lines = [];
@@ -496,26 +496,26 @@ export async function removeRest (canvas, {dir = "h", threshold = 120} = {}) {
 			$.x = x;
 			$.y = y;
 			if (!proc[`${$.x}:${$.y}`]) {
-				while ($.ad > miny && p($.x, $.y, ref)[3] >= threshold) {
+				while ($.ad > miny && getPoint($.x, $.y, ref)[3] >= threshold) {
 					$.ad--;
 				}
 				$.ad++;
-				while (isInBounds() && p($.x, $.y, ref)[3] >= threshold) {
+				while (isInBounds() && getPoint($.x, $.y, ref)[3] >= threshold) {
 					proc[`${$.x}:${$.y}`] = true;
 
 					if (dir === "h") {
-						if ($.md > 0 && !proc[`${$.x - 1}:${$.y}`] && p($.x - 1, $.y, ref)[3] >= 1) {
+						if ($.md > 0 && !proc[`${$.x - 1}:${$.y}`] && getPoint($.x - 1, $.y, ref)[3] >= 1) {
 							stack.push([$.x - 1, $.y]);
 						}
-						if ($.md < $.ms - 1 && !proc[`${$.x + 1}:${$.y}`] && p($.x + 1, $.y, ref)[3] >= 1) {
+						if ($.md < $.ms - 1 && !proc[`${$.x + 1}:${$.y}`] && getPoint($.x + 1, $.y, ref)[3] >= 1) {
 							stack.push([$.x + 1, $.y]);
 						}
 					}
 					else {
-						if ($.md > 0 && !proc[`${$.x}:${$.y - 1}`] && p($.x, $.y - 1, ref)[3] >= 1) {
+						if ($.md > 0 && !proc[`${$.x}:${$.y - 1}`] && getPoint($.x, $.y - 1, ref)[3] >= 1) {
 							stack.push([$.x, $.y - 1]);
 						}
-						if ($.md < $.ms - 1 && !proc[`${$.x}:${$.y + 1}`] && p($.x, $.y + 1, ref)[3] >= 1) {
+						if ($.md < $.ms - 1 && !proc[`${$.x}:${$.y + 1}`] && getPoint($.x, $.y + 1, ref)[3] >= 1) {
 							stack.push([$.x, $.y + 1]);
 						}
 					}
@@ -529,7 +529,7 @@ export async function removeRest (canvas, {dir = "h", threshold = 120} = {}) {
 		}
 		Object.keys(proc).forEach(key => {
 			const [x, y] = key.split(":");
-			s(x, y, ref, [0, 0, 0, 0]);
+			setPoint(x, y, ref, [0, 0, 0, 0]);
 		});
 	};
 
@@ -550,7 +550,7 @@ export async function removeRest (canvas, {dir = "h", threshold = 120} = {}) {
 			boundFromBottom = ($.ad < $.as && (colBot = $p($.md, $.ad + 1, ref), colBot[3]) >= threshold);
 
 			let type;
-			const col = p($.x, $.y, ref)
+			const col = getPoint($.x, $.y, ref)
 			if (col[3] < threshold) { // transparent
 				if (boundFromBottom || boundFromTop) {
 					type = "t";
@@ -603,9 +603,7 @@ export async function removeRest (canvas, {dir = "h", threshold = 120} = {}) {
 				const end = ws[ws.length - 1].end;
 				if (w > 50 && w > t * 2) {
 				}
-				else if (end - start > 20 && t * 3 > w) {
-					console.log("RESET", {t, w, e}, ws);
-					console.log(line, ad, start, end);
+				else if (end - start > 20 && t * 3 > w) {					
 					ws.forEach(i => {
 						if (i.type === "w") {
 							removeFill(i.p.x, i.p.y, i.boundFromTop, i.boundFromBottom);
@@ -776,9 +774,9 @@ export function replaceColor (canvas, srcColor, destColor, invert = false) {
 
 	for (let y = 0; y < ref.height; y++) {
 		for (let x = 0; x < ref.width; x++) {
-			const d = colorDistance(p(x, y, ref, false), rgb);
+			const d = colorDistance(getPoint(x, y, ref, false), rgb);
 			if (invert ? d > 0 : d < 120) {
-				s(x, y, ref, destColor);
+				setPoint(x, y, ref, destColor);
 			}
 		}
 	}
@@ -853,7 +851,7 @@ async function run (params = {}) {
 		// 	color: "black",
 		// 	padding: [0],
 		// 	radius: 8 * dpr,
-		// 	// sqare: true,
+		// 	// square: true,
 		// 	center: true,
 		// 	fancyRadius: false,
 		// 	mask: true,
@@ -865,7 +863,7 @@ async function run (params = {}) {
 			color,
 			padding: [8 * dpr, 12 * dpr],
 			radius: 16,
-			// sqare: true,
+			// square: true,
 			center: true,
 			fancyRadius: false,
 		});
@@ -926,68 +924,44 @@ async function run (params = {}) {
 // run({width: 240, dpr: 2});
 // window.dataStore = dataStore;
 
+const currentFileVersion = 2;
+
+export async function convertSprites (sprites) {
+	
+	if (!sprites.index) {
+		sprites = {index: sprites};		
+		
+	}			
+	
+	Object.keys(sprites.index).forEach(key => {
+		const sprite = sprites.index[key];
+		sprite.params = sprite.params || {};
+	});
+	if (!sprites.id) {
+		sprites.id = Object.keys(sprites.index).reduce((res, key, idx) => Math.max(res, sprites.index[key].id ? +sprites.index[key].id : idx + 1), 0);
+	}	
+
+	if (!sprites.version || +sprites.version === 1) {
+		sprites.index = Object.keys(sprites.index).map(key => sprites.index[key]).reduce((res, sprite) => (res[sprite.id] = sprite, res), {})
+	}
+
+	Object.keys(sprites.index).forEach(key => sprites.index[key].id = key);
+	sprites.order = sprites.order.map(i => i.toString());
+	sprites.version = currentFileVersion;
+	return sprites;
+}
+
 export async function loadDataFromFile () {
-	const files = await openFile();
-	// const zip = await JSZip.loadAsync(files[0]);
-	// const str = await zip.file("resources/data/sprites.json").async("string");
+	const files = await openFile();	
 	const str = await readFile(files[0]);
 	const sprites = JSON.parse(str);
-	return sprites;
-	
+
+	return convertSprites(sprites);
 }
 
 export async function saveDataToFile (sprites) {
-	const filename = "sprites";
-	// const zip = new JSZip();
-	// const folder = zip.folder("resources");
-	// // const folder = zip.folder(filename);
-	// // const sprites = await dataStore.load();
-	// let css = ``;
-	// let html = ``;
-	// await [1, 2].reduce(async (result, dpr) => {
-	// 	await result;
-	// 	const boxes = Object.keys(sprites.index).map(name => sprites.index[name][`dest${dpr}x`]);
-	// 	const {w, h, fill} = potpack(boxes);
-	// 	const filename = `partner-sprite@${dpr}x.png`
-	// 	const canvas = createCanvas(w, h);
-	// 	const ctx = canvas.getContext("2d");
-	// 	if (dpr > 1) {
-	// 		css += `\n@media (min-resolution: 192dpi), (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (-o-min-device-pixel-ratio: 2/1), (min-device-pixel-ratio: 2), (min-resolution: 2dppx) {`
-	// 	}
-	// 	css += `\n.sprite-img {background-image: url("../img/partner-sprite/${filename}"); background-repeat: no-repeat;}`;
-	// 	await Object.keys(sprites.index).reduce(async (prev, key) => {
-	// 		await prev;
-	// 		const sprite = sprites.index[key];
-	// 		const name = sprite.name;
-	// 		const box = sprite[`dest${dpr}x`];
-	// 		const img = await loadImage(box.url);
-	// 		css += `\n.sprite-img.sprite-img-${name} {
-	// 			background-position: ${w === box.w ? 0 : (box.x / (w - box.w) * 100).toPrecision(5)}% ${h === box.h ? 0 : (box.y / (h - box.h) * 100).toPrecision(5)}%;
-	// 			background-size: ${(w / box.w * 100).toPrecision(5)}% ${(h / box.h * 100).toPrecision(5)}%;
-	// 			width: ${box.width}px;
-	// 			height: ${box.height}px;
-	// 			transform: rotate(${sprite.params.rotate || 0}deg);
-	// 		}`;
-	// 		ctx.drawImage(img, box.x, box.y, box.w, box.h);
-	// 		if (dpr === 1) {
-	// 			html += `\n<a data-logo-category="${sprite.params.category}" href="${sprite.params.url || "${" + transformKey(`logo-url-${name}`) + `!"#"}`}" class="sprite-img sprite-img-${name}" target="_blank" rel="noopener"></a>`;
-	// 		}
-	// 	}, null);
-	// 	if (dpr > 1) {
-	// 		css += `\n}`;
-	// 	}
-	// 	const file = await canvasToFile(canvas, `partner-sprite@${dpr}x.png`);
-	// 	folder.file(`static/dist/img/partner-sprite/${filename}`, file);
-	// 	return result;
-	// }, []);
-
-	// folder.file(`data/${filename}.json`, new Blob([JSON.stringify(sprites, null, "\t")], {type: "application/json"}));
-	// folder.file(`static/src/less/${filename}.less`, new Blob([css], {type: "text/css"}));
-	// folder.file(`templates/chast/${filename}.ftl`, new Blob([html], {type: "text/html"}));
-
-	// console.log("==== creating zip file =====");
-	// const content = await zip.generateAsync({type: "blob"});
-
+	const filename = "sprites";	
+	sprites.version = currentFileVersion;
 	const content = new Blob([JSON.stringify(sprites, null, "\t")], {type: "application/json"});
 	const url = URL.createObjectURL(content);
 	let a = document.createElement("a");

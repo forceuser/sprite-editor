@@ -12,6 +12,12 @@ export class Deferred {
 	}
 }
 
+export function uuid () {
+	return Array.from(crypto.getRandomValues(new Uint32Array(4))).map(n => n.toString(16)).join("-");
+}
+
+export const toArray = (obj) => Object.keys(obj).map(key => ({key, value: obj[key]}));
+
 export function clone (obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
