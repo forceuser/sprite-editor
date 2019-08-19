@@ -204,6 +204,10 @@ export function correctRadius(r, w, h) {
 
 export function doPadding (...value) {
 	value = flattenDeep(value);
+	if (value.length === 1 && typeof value[0] === "string") {
+		value = value[0].split(/\s/g).map(i => +i);
+	}
+	value = value.map(i => i || 0);
 
 	switch (value.length) {
 		case 0: return new Array(4).fill(0);

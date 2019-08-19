@@ -5,41 +5,39 @@ function factory (mode) {
 		const elm = vnode.elm;
 		const model = vnode.data.model;// Object.getOwnPropertyDescriptor(vnode.data, "model");
 		const tagName = elm.tagName.toLowerCase();
-
+		const type = elm.getAttribute("type");
+		const change = tagName === "select" || type === "checkbox";
+		
 		if ("value" in vnode.data) {
 			elm.setAttribute("value", vnode.data.value);
-		}
+		}		
 
 		if (model) {
 			if (oldVnode && oldVnode.data.modelData) {
-				switch (tagName) {
-					case "select":
-						elm.removeEventListener("change", oldVnode.data.modelData.inputHandler);
-						break;
-					default:
-						elm.removeEventListener("input", oldVnode.data.modelData.inputHandler);
-						break;
-				}
+				elm.removeEventListener(change ? "change" : "input", oldVnode.data.modelData.inputHandler);
 			}
 			const initial = !vnode.data.modelData;
 
 			vnode.data.modelData = {
 				inputHandler: event => {
-					model.set(elm.value, elm);
+					if (type === "checkbox") {
+						model.set(elm.checked, elm);
+					}
+					else {
+						model.set(elm.value, elm);
+					}
 				},
 			}
-			switch (tagName) {
-				case "select":
-					elm.addEventListener("change", vnode.data.modelData.inputHandler);
-					break;
-				default:
-					elm.addEventListener("input", vnode.data.modelData.inputHandler);
-					break;
-			}
+			elm.addEventListener(change ? "change" : "input", vnode.data.modelData.inputHandler);
 			if (initial) {
 				let val = model.get(elm);
-				elm.value = val == null ? "" : val;
-				if (tagName === "select" && mode === "create") {
+				if (type === "checkbox") {
+					elm.checked = !!val;
+				}
+				else {
+					elm.value = val == null ? "" : val;
+				}
+				if (change && mode === "create") {
 					elm.dispatchEvent(new Event("change"));
 				}
 			}

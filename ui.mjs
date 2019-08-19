@@ -1,8 +1,8 @@
 import {mod} from "./model.mjs";
 import {default as dataStore} from "./data.mjs";
-import {loadDataFromFile, saveDataToFile, convertSprites, crop, roundRect, growEx, removeRest, joinWhite, fill} from "./sprite-editor.mjs";
+import {loadDataFromFile, saveDataToFile, convertSprites, crop, roundRect, growEx, removeRest, joinWhite, fill, tint, replaceColor} from "./sprite-editor.mjs";
 import {h, observable, reaction, cacheable, ViewComponent, classList} from "./view.mjs";
-import {imageToCanvas, loadImage, createCanvas, toDPR, copyCanvas, Rect} from "./graphics.mjs";
+import {imageToCanvas, loadImage, createCanvas, toDPR, copyCanvas, Rect, doPadding} from "./graphics.mjs";
 import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
 
 class $select extends ViewComponent {
@@ -37,6 +37,16 @@ class $range extends ViewComponent {
 	}
 }
 
+class $checkbox extends ViewComponent {
+	view (h, d) {
+		return h("label", () => ({attrs: {button: true}, class: ["inversed"]}), h => [
+			h("input", () => ({attrs: {type: "checkbox", disabled: d.params.disabled}, model: d.params.model})),
+			h("box"),
+			h("span", {}, d.params.title || "")
+		]);	
+	}
+}
+
 
 class $button extends ViewComponent {
 	view (h, d) {		
@@ -46,13 +56,13 @@ class $button extends ViewComponent {
 
 const schema = {
 	start: {		
+		title: "Подготовка изображения",
 		defaultValues: {
 			scale: 1,
 		},
 		init: filter => {			
 		},
-		ui: (h, d, filter) => {
-			console.log("filter", filter);
+		ui: (h, d, filter) => {			
 			return [
 				h($range, () => ({title: "scale", min: 0.5, max: 1.5, step: 0.01, model: mod(filter, "scale")})),
 			];
@@ -72,29 +82,94 @@ const schema = {
 		}
 	},	
 	fill: {
+		title: "Убрать фоновый цвет",
+		defaultValues: {
+			threshold: 30,			
+		},
+		ui: (h, d, filter) => {			
+			return [				
+				h($range, () => ({title: "threshold", min: 0, max: 256, step: 1, model: mod(filter, "threshold")})),
+			];
+		},
 		apply: async (filter, canvas, srcImg) => {						
-			await fill(canvas, 30);		
+			await fill(canvas, filter.threshold);		
 		},
 	},
 	grow: {
-		apply: async (filter, canvas, srcImg) => {						
-			const color = "white";		
-			await growEx(canvas, {size: 20, smooth: 0, color, fast: false});
-			await joinWhite(canvas, {dir: "h", dst: 10, color});
-			await joinWhite(canvas, {dir: "v", dst: 10, color});
+		title: "Обводка",
+		defaultValues: {
+			color: "#fff",
+			size: 12,			
+			smooth: 0,
+		},
+		ui: (h, d, filter) => {			
+			return [
+				h($input, () => ({title: "color", model: mod(filter, "color")})),
+				h($range, () => ({title: "size", min: 0, max: 80, step: 1, model: mod(filter, "size")})),
+				h($range, () => ({title: "smooth", min: 0, max: 5, step: 1, model: mod(filter, "smooth")})),
+			];
+		},
+		apply: async (filter, canvas, srcImg) => {										
+			await growEx(canvas, {size: filter.size, smooth: filter.smooth, color: filter.color, fast: false});
+			await joinWhite(canvas, {dir: "h", dst: 10, color: filter.color});
+			await joinWhite(canvas, {dir: "v", dst: 10, color: filter.color});
 			// await removeRest(canvas, {dir: "h"});
 			// await removeRest(canvas, {dir: "v"});			
 		},
 	},
-	rect: {
+	tint: {
+		title: "Применить оттенок",
 		defaultValues: {
-			radius: 16,
 			color: "#fff",
 		},
 		ui: (h, d, filter) => {			
 			return [
 				h($input, () => ({title: "color", model: mod(filter, "color")})),
+			];
+		},
+		apply: async (filter, canvas, srcImg) => {
+			if (filter.color) {
+				tint(canvas, filter.color);
+			}
+		}
+	},	
+	replaceColor: {
+		title: "Замена цвета",
+		defaultValues: {
+			srcColor: "#fff",
+			destColor: "#000",
+			invert: false,
+		},
+		ui: (h, d, filter) => {			
+			return [
+				h($input, () => ({title: "srcColor", model: mod(filter, "srcColor")})),
+				h($input, () => ({title: "destColor", model: mod(filter, "destColor")})),
+				h($checkbox, {title: "invert", model: mod(filter, "invert")}),
+			];
+		},
+		apply: async (filter, canvas, srcImg) => {
+			if (filter.srcColor && filter.destColor) {
+				replaceColor(canvas, filter.srcColor, filter.destColor, filter.invert);
+			}
+		}
+	},
+	rect: {
+		title: "Подложка",
+		defaultValues: {
+			radius: 16,
+			color: "#fff",
+			padding: "20",
+			center: true,
+		},
+		ui: (h, d, filter) => {			
+			return [
+				h($input, () => ({title: "color", model: mod(filter, "color")})),
+				h($input, () => ({title: "padding", model: mod(filter, "padding")})),
 				h($range, () => ({title: "radius", min: 0, max: 64, step: 8, model: mod(filter, "radius")})),
+				h($checkbox, {title: "square", model: mod(filter, "square")}),
+				h($checkbox, {title: "center", model: mod(filter, "center")}),
+				h($checkbox, {title: "mask", model: mod(filter, "mask")}),
+				h($checkbox, {title: "fancyRadius", model: mod(filter, "fancyRadius")}),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
@@ -107,39 +182,46 @@ const schema = {
 			roundRect(canvas, new Rect({height: rh}), {
 				// color: color2,
 				color,
-				padding: [8 * dpr, 12 * dpr],
+				padding: doPadding(filter.padding),
 				radius: +filter.radius,
-				// square: true,
-				center: true,
-				fancyRadius: false,
+				square: filter.square,
+				center: filter.center,
+				mask: filter.mask,
+				fancyRadius: filter.fancyRadius,
 			});
 		}
 	},
 	crop: {
-
-	},
-	finish: {
-		order: +Infinity,
-		closeable: false,
-		single: true,
-		apply: async (filter, canvas, srcImg) => {
-			const ctx = canvas.getContext("2d");	
+		title: "Обрезать лишнее",
+		apply: async (filter, canvas, srcImg) => {			
 			await crop(canvas);
 		},
 	},
+	// finish: {
+	// 	order: +Infinity,
+	// 	closeable: false,
+	// 	single: true,
+	// 	apply: async (filter, canvas, srcImg) => {
+	// 		const ctx = canvas.getContext("2d");	
+	// 		await crop(canvas);
+	// 	},
+	// },
 };
 
 const dpr = 2;
 
 function uiForEditing (h, d) {
-	if (d.editing) {		
+	if (d.editing) {	
+		console.log("d.editing");
 		return [
 			...uiForParams(d, h),
 			...(d.editing.filters || []).map(filter => uiForFilter(d, filter, h)).filter(i => i),
 			h("section", "add-filter", {class: ["param-section"]}, h => [
-				h($select, () => ({title: "добавить фильтр", model: mod(d, "filterToAdd"), options: Object.keys(schema).map(key => ({id: key, value: key}))})),
-				h($button, {click: () => addFilter(d)}, "Добавить"),
-				h($button, {click: () => applyFilters(d, d.editing)}, "Применить фильтры"),
+				h($select, () => ({title: "добавить фильтр", model: mod(d, "filterToAdd"), options: Object.keys(schema).map(key => ({id: key, value: schema[key].title || key}))})),
+				h($button, {click: () => addFilter(d, d.editing, d.filterToAdd)}, "Добавить"),				
+			]),
+			h("section", "apply-filter", {class: ["param-section", "apply-filter"]}, h => [				
+				h($button, {click: () => applyFilters(d.editing)}, "Применить фильтры"),
 			]),
 		];
 	}
@@ -149,27 +231,25 @@ function uiForEditing (h, d) {
 function removeFilter (d, filter) {
 	const idx = d.editing.filters.indexOf(filter);
 	d.editing.filters.splice(idx, 1);
-	applyFilters(d, d.editing);
+	applyFilters(d.editing);
 }
 
 
-function addFilter(d) {
-	console.log("d.filterToAdd", d.filterToAdd);
-	d.editing.filters = d.editing.filters || [];
-	const init = schema[d.filterToAdd].init;
-	let filter = Object.assign({id: uuid(), type: d.filterToAdd}, schema[d.filterToAdd].defaultValues || {});
+function addFilter(d, sprite, filterToAdd) {	
+	sprite.filters = sprite.filters || [];
+	const init = schema[filterToAdd].init;
+	let filter = Object.assign({id: uuid(), type: filterToAdd}, schema[filterToAdd].defaultValues || {});
 	init && init(filter);
-	d.editing.filters.push(filter);
-	applyFilters(d, d.editing);
+	sprite.filters.push(filter);
+	applyFilters(sprite);
 }
 
 function uiForFilter (d, filter, h) {
 	const params = schema[filter.type];
-	const ui = params && params.ui;	
-	console.log("ui for filter", filter);
+	const ui = params && params.ui;		
 	return h("section", `filter~${filter.type}~${filter.id}`, {class: ["param-section"]}, h => [
 		h("div", () => ({class: ["param-section-header"]}), h => [
-			h("div", {}, () => filter.type),
+			h("div", {}, () => schema[filter.type].title || filter.type),
 			h("button", () => ({class: ["close"], on: {click: () => removeFilter(d, filter)}})),
 		]),
 		...(ui ? ui(h, d, filter) : []),
@@ -204,7 +284,7 @@ function uiForParams (d, h) {
 	];
 }
 
-async function applyFilters (d, sprite) {
+async function applyFilters (sprite) {
 	let srcImg = await loadImage(sprite.src.url);
 	const canvas = createCanvas(srcImg.width, srcImg.height);
 	const ctx = canvas.getContext("2d");
@@ -219,8 +299,7 @@ async function applyFilters (d, sprite) {
 	const dpr1x = toDPR(canvas, dpr, 1);
 	sprite.dest1x = {url: dpr1x.toDataURL("image/png"), w: dpr1x.width, h: dpr1x.height, width: dpr1x.width, height: dpr1x.height};
 	sprite.dest2x = {url: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, width: dpr1x.width, height: dpr1x.height};
-	sprite.params.square = sprite.dest2x.width - sprite.dest2x.height < (sprite.dest2x.width / 100 * 10);
-	d.sprites.index[sprite.id] = sprite;
+	sprite.params.square = sprite.dest2x.width - sprite.dest2x.height < (sprite.dest2x.width / 100 * 10);	
 };
 
 
@@ -228,6 +307,7 @@ async function removeSprite (d, sprite) {
 	const idx = d.sprites.order.indexOf(sprite.id);
 	d.sprites.order.splice(idx, 1);
 	delete d.sprites.index[sprite.id];
+	d.editing = null;
 }
 
 async function editSprite (d, sprite) {
@@ -245,23 +325,20 @@ async function editSprite (d, sprite) {
 			name,
 			src: {url: imageToCanvas(img).toDataURL("image/png"), w: img.width, h: img.height},
 			params: {},
-			filters: [
+			filters: [				
 				// {type: "main", rotate: 0, scale: 1, url: "https://welovemebel.com.ua/"},
 				// {type: "temp"},
 			],
 		};
+		addFilter(d, sprite, "start");
+		d.sprites.index[sprite.id] = sprite;
 		d.sprites.order.push(sprite.id);
+
 	}
 	d.editing = sprite;
 	
-	d.save = async () => {
-		sprites[name] = d.editing;
-	}
-	d.cancel = async () => {
-		d.editing = null;
-	}
 	if (add) {
-		applyFilters(d, d.editing);
+		applyFilters(d.editing);
 	}
 }
 

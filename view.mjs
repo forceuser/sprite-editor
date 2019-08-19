@@ -120,8 +120,13 @@ export function h (type, key, params, content) {
 				if (typeof params === "function") {
 					// staticParams = params();
 					reaction(() => {			
-						const p = params();						
-						instance && instance.setParams(p);						
+						try {
+							const p = params();											
+							instance && instance.setParams(p);
+						}
+						catch (error) {
+							console.log("Error in view:", error);
+						}				
 					});
 				}
 				else {
@@ -130,8 +135,13 @@ export function h (type, key, params, content) {
 				if (typeof content === "function") {
 					// staticContent = content();
 					reaction(() => {	
-						const c = content();						
-						instance && instance.setContent(c);						
+						try {
+							const c = content();						
+							instance && instance.setContent(c);		
+						}
+						catch (error) {
+							console.log("Error in view:", error);
+						}					
 					});
 				}
 				else {
@@ -166,21 +176,31 @@ export function h (type, key, params, content) {
 				let contentVNode = vnode;				
 				reaction(() => {
 					cache.start();
-					// console.log("patch content", key);
-					let cont = content(childH);
-					// if (Array.isArray(cont)) {
-					// 	cont = flattenDeep(cont);						
-					// }
-					contentVNode = $patch(contentVNode, snabbdom.h(type, contentVNode.data, cont));
+					try {
+						// console.log("patch content", key);
+						let cont = content(childH);
+						// if (Array.isArray(cont)) {
+						// 	cont = flattenDeep(cont);						
+						// }
+						contentVNode = $patch(contentVNode, snabbdom.h(type, contentVNode.data, cont));
+					}
+					catch (error) {
+						console.log("Error in view:", error);
+					}	
 					cache.end();
 				});				
 			}
 			let paramsVNode = vnode;
 			if (!isStaticParams) {
 				reaction(() => {
-					const p = getParams(params, key);
-					// console.log("patch params", key);
-					paramsVNode = $patch(paramsVNode, snabbdom.h(type, p, staticContent));
+					try {
+						const p = getParams(params, key);
+						// console.log("patch params", key);
+						paramsVNode = $patch(paramsVNode, snabbdom.h(type, p, staticContent));
+					}
+					catch (error) {
+						console.log("Error in view:", error);
+					}	
 				});
 			}
 		}

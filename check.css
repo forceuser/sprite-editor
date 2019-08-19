@@ -1,0 +1,345 @@
+:root {
+    --checkbox-size: 1em;
+	--checkbox-border-width: 0.15em;
+    --checkbox-line-width: 0.2em;
+    --color--primary-text-contrast: white;
+}
+
+@keyframes wd {
+    0% {
+        transform: scale(1.2);
+    }
+}
+
+@keyframes pump {
+    0% {
+        transform: rotate(40deg) scale(0.6);
+    }
+
+    25% {
+        transform: rotate(40deg) scale(0.65);
+    }
+
+    35% {
+        transform: rotate(40deg) scale(0.5);
+    }
+
+    45% {
+        transform: rotate(40deg) scale(0.65);
+    }
+
+    55% {
+        transform: rotate(40deg) scale(0.6);
+    }
+
+    100% {
+        transform: rotate(40deg) scale(0.6);
+    }
+}
+
+.input-block,
+label[button-block] {
+    display      : block;
+    margin-bottom: 0.2em;
+    user-select  : none;
+    padding      : 20px 20px;
+    background   : #3a3a3a;
+    background   : #fff;
+    box-shadow   : 0px 1px 1px #eee;
+    transition   : all 0.3s ease;
+}
+
+.input-block:hover,
+label[button-block]:hover {
+    background: #444;
+    background: #f4f4f4;
+}
+
+label {
+    font-weight: inherit;
+}
+
+label:active input:not(:disabled)+box {
+    animation: wd 0.5s ease forwards;
+}
+
+label[button] {
+    margin-bottom: 10px;
+}
+
+label[button],
+label[button-block] {
+    user-select: none;
+    display    : inline-block;
+    outline    : none;
+    white-space: nowrap;
+    margin-left: 5px;
+    position   : relative;
+}
+
+label[button] input[type="radio"],
+label[button-block] input[type="radio"],
+label[button] input[type="checkbox"],
+label[button-block] input[type="checkbox"] {
+    opacity : 0;
+    width   : 0;
+    height  : 0;
+    left    : 0;
+    top     : 0;
+    position: absolute;
+    z-index : -1;
+}
+
+label[button] input[type="radio"]+box,
+label[button-block] input[type="radio"]+box,
+label[button] input[type="checkbox"]+box,
+label[button-block] input[type="checkbox"]+box {
+    position      : relative;
+    display       : inline-block;
+    vertical-align: middle;
+    font-size     : var(--checkbox-size);
+    width         : 1.5em;
+    height        : 1.5em;
+    border        : var(--checkbox-border-width) solid;
+    transition    : all 0.3s ease;
+    color         : var(--color--primary);
+    border-color  : rgba(129, 129, 129, 0.17);
+    background    : rgba(156, 156, 156, 0.07);
+}
+
+label[button] input[type="radio"]+box:before,
+label[button-block] input[type="radio"]+box:before,
+label[button] input[type="checkbox"]+box:before,
+label[button-block] input[type="checkbox"]+box:before {
+    content      : "";
+    position     : absolute;
+    border-radius: inherit;
+    left         : 0;
+    right        : 0;
+    top          : 0;
+    bottom       : 0;
+    opacity      : 0;
+    transition   : all 0.3s ease;
+}
+
+label[button] input[type="radio"]+box:after,
+label[button-block] input[type="radio"]+box:after,
+label[button] input[type="checkbox"]+box:after,
+label[button-block] input[type="checkbox"]+box:after {
+    content   : "";
+    position  : absolute;
+    display   : block;
+    background: currentColor;
+    width     : 100%;
+    height    : 100%;
+    border    : var(--checkbox-line-width) solid;
+    transform : scale(0.2);
+    opacity   : 0;
+    color     : #aaa;
+    transition: all 0.3s ease;
+}
+
+label[button] input[type="radio"]:checked+box,
+label[button-block] input[type="radio"]:checked+box,
+label[button] input[type="checkbox"]:checked+box,
+label[button-block] input[type="checkbox"]:checked+box {
+    border-color: currentColor;
+    box-shadow  : inset 0px 0px 0.05em rgba(0, 0, 0, 0.1);
+}
+
+label[button] input[type="radio"]:checked+box:after,
+label[button-block] input[type="radio"]:checked+box:after,
+label[button] input[type="checkbox"]:checked+box:after,
+label[button-block] input[type="checkbox"]:checked+box:after {
+    color    : currentColor;
+    transform: scale(0.5);
+    opacity  : 1;
+}
+
+label[button]:hover input:not(:disabled)+box,
+label[button-block]:hover input:not(:disabled)+box,
+label[button] input:not(:disabled):focus+box,
+label[button-block] input:not(:disabled):focus+box {
+    border-color: currentColor;
+    box-shadow  : inset 0px 0px 0.05em rgba(0, 0, 0, 0.1);
+}
+
+label[button]:hover input:not(:disabled)+box:after,
+label[button-block]:hover input:not(:disabled)+box:after {
+    opacity: 1;
+}
+
+label[button] input~*,
+label[button-block] input~* {
+    cursor: pointer;
+}
+
+label[button] input:disabled~*,
+label[button-block] input:disabled~* {
+    cursor: not-allowed;
+}
+
+label[button] input+box+span,
+label[button-block] input+box+span {
+    display       : inline-block;
+    padding       : 2px 12px;
+    vertical-align: middle;
+    white-space   : normal;
+    margin-left   : -4px;
+    margin-right  : -4px;
+    top           : 1px;
+    position      : relative;
+}
+
+label[button] input:focus+box:before,
+label[button-block] input:focus+box:before {
+    margin       : -0.1em;
+    border-radius: 100%;
+    box-shadow   : 0px 0px 0px 0.5em currentColor;
+    opacity      : 0.15;
+    z-index      : 0;
+}
+
+label[button] input[type="radio"]+box,
+label[button-block] input[type="radio"]+box {
+    border-radius: 100%;
+}
+
+label[button] input[type="radio"]+box:after,
+label[button-block] input[type="radio"]+box:after {
+    border-radius: 100%;
+}
+
+label[button] input[type="checkbox"]+box,
+label[button-block] input[type="checkbox"]+box {
+    border-radius: 0.2em;
+}
+
+label[button] input[type="checkbox"]+box:after,
+label[button-block] input[type="checkbox"]+box:after {
+    border-top : 0px;
+    border-left: 0px;
+    background : none;
+    left       : 22%;
+    top        : -7%;
+    width      : 55%;
+    transform  : rotate(39deg) scale(0.5);
+    transition : all 0.2s ease;
+}
+
+label[button] input[type="checkbox"]:checked+box:after,
+label[button-block] input[type="checkbox"]:checked+box:after {
+    transform: rotate(41deg) scale(0.7);
+}
+
+label[button] input[type="checkbox"]:indeterminate+box:after,
+label[button-block] input[type="checkbox"]:indeterminate+box:after {
+    border-top : 0px;
+    border-left: 0px;
+    background : currentColor;
+    left       : 20%;
+    top        : 20%;
+    width      : 60%;
+    height     : 60%;
+    opacity    : 1;
+    transform  : rotate(0deg) scale(0.7);
+    transition : all 0.2s ease;
+}
+
+label[button] input:disabled+box,
+label[button-block] input:disabled+box {
+    background  : rgba(119, 119, 119, 0.07);
+    color       : rgba(119, 119, 119, 0.4) !important;
+    border-color: rgba(119, 119, 119, 0.1) !important;
+}
+
+label[button] input:disabled+box:after,
+label[button-block] input:disabled+box:after {
+    border-color: rgba(119, 119, 119, 0.2) !important;
+}
+
+label[button] input:disabled+box+span,
+label[button-block] input:disabled+box+span {
+    color: rgba(119, 119, 119, 0.4) !important;
+}
+
+label[button] input.slide.slide.slide+box,
+label[button-block] input.slide.slide.slide+box {
+    width        : 2.5em;
+    border-radius: 0.7em;
+}
+
+label[button] input.slide.slide.slide+box:after,
+label[button-block] input.slide.slide.slide+box:after {
+    border       : none;
+    width        : 50%;
+    height       : auto;
+    top          : 0;
+    bottom       : 0;
+    background   : rgba(0, 0, 0, 0.5);
+    color        : inherit;
+    border-radius: 100%;
+    left         : 0.03em;
+    opacity      : 0.7;
+    transform    : scale(0.9);
+    transition   : all 0.3s ease;
+}
+
+label[button] input.slide.slide.slide:not(:disabled):hover+box:after,
+label[button-block] input.slide.slide.slide:not(:disabled):hover+box:after,
+label[button] input.slide.slide.slide:not(:disabled):focus+box:after,
+label[button-block] input.slide.slide.slide:not(:disabled):focus+box:after {
+    background: currentColor;
+}
+
+label[button] input.slide.slide.slide:checked+box:after,
+label[button-block] input.slide.slide.slide:checked+box:after {
+    background: currentColor;
+    left      : 1.06em;
+    opacity   : 1;
+}
+
+label[button] input.slide.slide.slide:focus+box:before,
+label[button-block] input.slide.slide.slide:focus+box:before {
+    border-radius: 0.7em;
+}
+
+label[button].inversed input[type="radio"]+box:after,
+label[button-block].inversed input[type="radio"]+box:after {
+    transition: all 0.3s ease, transform 0.15s 0.15s ease;
+}
+
+label[button].inversed input[type="checkbox"]+box:after,
+label[button-block].inversed input[type="checkbox"]+box:after {
+    transition: all 0.3s ease, transform 0.15s 0.15s ease;
+}
+
+label[button].inversed input.slide.slide.slide:checked+box,
+label[button-block].inversed input.slide.slide.slide:checked+box,
+label[button].inversed input:checked+box,
+label[button-block].inversed input:checked+box {
+    border-color: currentColor;
+    background  : currentColor;
+}
+
+label[button].inversed input.slide.slide.slide:checked+box:after,
+label[button-block].inversed input.slide.slide.slide:checked+box:after,
+label[button].inversed input:checked+box:after,
+label[button-block].inversed input:checked+box:after {
+    color: var(--color--primary-text-contrast);
+}
+
+label[button].inversed input.slide.slide.slide:disabled:checked+box,
+label[button-block].inversed input.slide.slide.slide:disabled:checked+box,
+label[button].inversed input:disabled:checked+box,
+label[button-block].inversed input:disabled:checked+box {
+    border-color: rgba(119, 119, 119, 0) !important;
+    background  : rgba(119, 119, 119, 0.2) !important;
+}
+
+label[button].inversed input.slide.slide.slide:disabled:checked+box:after,
+label[button-block].inversed input.slide.slide.slide:disabled:checked+box:after,
+label[button].inversed input:disabled:checked+box:after,
+label[button-block].inversed input:disabled:checked+box:after {
+    color: var(--color--primary-text-contrast) !important;
+}

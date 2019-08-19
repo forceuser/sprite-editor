@@ -30,14 +30,15 @@ body {
 }
 
 .button {
-	padding   : 0.5em 0.75em;
-	border    : 1px solid black;
-	background: black;
-	color     : #fafafa;
-	cursor    : default;
-	box-shadow: 0px 0px 0px 0px rgba(128, 128, 128, 0.2);
-	transition: all 0.3s ease;
-	min-width : 2.3em;
+	padding      : 0.5em 0.75em;
+	border       : 1px solid black;
+	background   : black;
+	color        : #fafafa;
+	cursor       : default;
+	box-shadow   : 0px 0px 0px 0px rgba(128, 128, 128, 0.2);
+	transition   : all 0.3s ease;
+	min-width    : 2.3em;
+	border-radius: 0.2em;
 }
 
 .button.active {
@@ -58,6 +59,7 @@ textarea {
 	border            : 1px solid rgba(128, 128, 128, 0.2);
 	box-shadow        : 0px 0px 0px 0px rgba(128, 128, 128, 0.2);
 	transition        : all 0.3s ease;
+	border-radius     : 0.2em;
 }
 
 label {
@@ -227,16 +229,25 @@ hr {
 	box-shadow       : 0px 2px 3px rgba(0, 0, 0, 0.16);
 }
 
+
+
 .param-section-header {
-	font-size     : 1.25em;
+	font-size     : 1.05em;
 	font-weight   : bold;
-	padding-bottom: 1em;
+	padding-bottom: 0.1em;
 	position      : relative;
 }
 
 .main-buttons {
 	position: sticky;
-	top     : 0px;
+	top     : -10px;
+	z-index : 2000;
+}
+
+.param-section.apply-filter {
+	position: sticky;
+	bottom  : -10px;
+	z-index : 2000;
 }
 
 .close {
