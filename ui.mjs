@@ -8,7 +8,7 @@ import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
 class $select extends ViewComponent {
 	view (h, d) {
 		return h("label", null, null, h => [
-			h("div", null, null, () => d.params.title),
+			...(d.params.title ? [h("div", null, null, d.params.title)] : []),
 			h("select", null, () => ({model: d.params.model}),
 				h => (d.params.options || []).map(item => h("option", item.id || item.key, {value: item.id || item.key}, item.value))
 			),
@@ -21,7 +21,7 @@ class $input extends ViewComponent {
 	view (h, d) {
 		return h("label", null, null, h => {			
 			return [
-				h("div", null, null, d.params.title),
+				...(d.params.title ? [h("div", null, null, d.params.title)] : []),
 				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model})),
 			];		
 		});
@@ -64,7 +64,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($range, () => ({title: "scale", min: 0.5, max: 1.5, step: 0.01, model: mod(filter, "scale")})),
+				h($range, () => ({title: "Масштабирование", min: 0.5, max: 1.5, step: 0.01, model: mod(filter, "scale")})),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
@@ -88,7 +88,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [				
-				h($range, () => ({title: "threshold", min: 0, max: 256, step: 1, model: mod(filter, "threshold")})),
+				h($range, () => ({title: "Граница определения фонового цвета", min: 0, max: 256, step: 1, model: mod(filter, "threshold")})),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {						
@@ -101,20 +101,44 @@ const schema = {
 			color: "#fff",
 			size: 12,			
 			smooth: 0,
+			joinWhiteHorisontal: true,
+			joinWhiteVertical: true,
+			removeRestHorisontal: true,
+			removeRestVertical: true,
+			joinWhiteHorisontalDistance: 10,
+			joinWhiteVerticalDistance: 10,
+			joinWhiteHorisontalDistance2: 200,
+			joinWhiteVerticalDistance2: 200,
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "color", model: mod(filter, "color")})),
-				h($range, () => ({title: "size", min: 0, max: 80, step: 1, model: mod(filter, "size")})),
-				h($range, () => ({title: "smooth", min: 0, max: 5, step: 1, model: mod(filter, "smooth")})),
+				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
+				h($range, () => ({title: "Размер", min: 0, max: 80, step: 1, model: mod(filter, "size")})),
+				h($range, () => ({title: "Сглаживание", min: 0, max: 5, step: 1, model: mod(filter, "smooth")})),
+				h($checkbox, {title: "Слияние границ по горизонтали", model: mod(filter, "joinWhiteHorisontal")}),
+				h($range, () => ({title: "Расстояние слияния по горизонтали", min: 0, max: 300, step: 1, model: mod(filter, "joinWhiteHorisontalDistance2")})),
+				// h($range, () => ({title: "Расстояние слияния по горизонтали2", min: 0, max: 300, step: 1, model: mod(filter, "joinWhiteHorisontalDistance2")})),
+				h($checkbox, {title: "Слияние границ по вертикали", model: mod(filter, "joinWhiteVertical")}),
+				h($range, () => ({title: "Расстояние слияния по вертикали", min: 0, max: 300, step: 1, model: mod(filter, "joinWhiteVerticalDistance2")})),
+				// h($range, () => ({title: "Расстояние слияния по вертикали2", min: 0, max: 300, step: 1, model: mod(filter, "joinWhiteVerticalDistance2")})),
+				h($checkbox, {title: "Убрать неровности на вертикалях", model: mod(filter, "removeRestHorisontal")}),
+				h($checkbox, {title: "Убрать неровности на горизонталях", model: mod(filter, "removeRestVertical")}),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {										
 			await growEx(canvas, {size: filter.size, smooth: filter.smooth, color: filter.color, fast: false});
-			await joinWhite(canvas, {dir: "h", dst: 10, color: filter.color});
-			await joinWhite(canvas, {dir: "v", dst: 10, color: filter.color});
-			// await removeRest(canvas, {dir: "h"});
-			// await removeRest(canvas, {dir: "v"});			
+			if (filter.joinWhiteHorisontal) {
+				await joinWhite(canvas, {dir: "h", dst: filter.joinWhiteHorisontalDistance, dst2: filter.joinWhiteHorisontalDistance2, color: filter.color});
+			}
+			if (filter.joinWhiteVertical) {
+				await joinWhite(canvas, {dir: "v", dst: filter.joinWhiteVerticalDistance, dst2: filter.joinWhiteVerticalDistance2, color: filter.color});
+			}
+			if (filter.removeRestHorisontal) {
+				await removeRest(canvas, {dir: "h"});
+			}
+			if (filter.removeRestVertical) {
+				await removeRest(canvas, {dir: "v"});			
+			}
 		},
 	},
 	tint: {
@@ -124,7 +148,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "color", model: mod(filter, "color")})),
+				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
@@ -142,8 +166,8 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "srcColor", model: mod(filter, "srcColor")})),
-				h($input, () => ({title: "destColor", model: mod(filter, "destColor")})),
+				h($input, () => ({title: "Исходный цвет", model: mod(filter, "srcColor")})),
+				h($input, () => ({title: "Цвет для замены", model: mod(filter, "destColor")})),
 				h($checkbox, {title: "invert", model: mod(filter, "invert")}),
 			];
 		},
@@ -163,13 +187,13 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "color", model: mod(filter, "color")})),
+				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
 				h($input, () => ({title: "padding", model: mod(filter, "padding")})),
 				h($range, () => ({title: "radius", min: 0, max: 64, step: 8, model: mod(filter, "radius")})),
-				h($checkbox, {title: "square", model: mod(filter, "square")}),
-				h($checkbox, {title: "center", model: mod(filter, "center")}),
-				h($checkbox, {title: "mask", model: mod(filter, "mask")}),
-				h($checkbox, {title: "fancyRadius", model: mod(filter, "fancyRadius")}),
+				h($checkbox, {title: "Квадрат", model: mod(filter, "square")}),
+				h($checkbox, {title: "Центрировать", model: mod(filter, "center")}),
+				h($checkbox, {title: "Использовать как маску", model: mod(filter, "mask")}),
+				h($checkbox, {title: "Странные скругления", model: mod(filter, "fancyRadius")}),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
@@ -197,15 +221,6 @@ const schema = {
 			await crop(canvas);
 		},
 	},
-	// finish: {
-	// 	order: +Infinity,
-	// 	closeable: false,
-	// 	single: true,
-	// 	apply: async (filter, canvas, srcImg) => {
-	// 		const ctx = canvas.getContext("2d");	
-	// 		await crop(canvas);
-	// 	},
-	// },
 };
 
 const dpr = 2;
@@ -217,7 +232,10 @@ function uiForEditing (h, d) {
 			...uiForParams(d, h),
 			...(d.editing.filters || []).map(filter => uiForFilter(d, filter, h)).filter(i => i),
 			h("section", "add-filter", {class: ["param-section"]}, h => [
-				h($select, () => ({title: "добавить фильтр", model: mod(d, "filterToAdd"), options: Object.keys(schema).map(key => ({id: key, value: schema[key].title || key}))})),
+				h("div", () => ({class: ["param-section-header"]}), h => [
+					h("div", {}, "Добавить фильтр"),
+				]),
+				h($select, () => ({model: mod(d, "filterToAdd"), options: Object.keys(schema).map(key => ({id: key, value: schema[key].title || key}))})),
 				h($button, {click: () => addFilter(d, d.editing, d.filterToAdd)}, "Добавить"),				
 			]),
 			h("section", "apply-filter", {class: ["param-section", "apply-filter"]}, h => [				
@@ -245,6 +263,7 @@ function addFilter(d, sprite, filterToAdd) {
 }
 
 function uiForFilter (d, filter, h) {
+	filter = observable(filter);
 	const params = schema[filter.type];
 	const ui = params && params.ui;		
 	return h("section", `filter~${filter.type}~${filter.id}`, {class: ["param-section"]}, h => [
@@ -252,7 +271,7 @@ function uiForFilter (d, filter, h) {
 			h("div", {}, () => schema[filter.type].title || filter.type),
 			h("button", () => ({class: ["close"], on: {click: () => removeFilter(d, filter)}})),
 		]),
-		...(ui ? ui(h, d, filter) : []),
+		...(ui ? ui(h, d, filter.$$watch) : []),
 	]);	
 	return;
 }

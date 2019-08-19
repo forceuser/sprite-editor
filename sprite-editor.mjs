@@ -1,6 +1,9 @@
 import dataStore from "./data.mjs";
 import {openFile, readFile, transformKey, cycle} from "./common.mjs";
-import {createCanvas, loadImage, canvasToFile, copyCanvas, getCrop, Rect, doPadding, normRect, correctRadius, colorToArray, getPoint, setPoint, colorDistance} from "./graphics.mjs";
+import {
+	createCanvas, loadImage, canvasToFile, copyCanvas, getCrop, Rect, 
+	doPadding, normRect, correctRadius, colorToArray, 
+	getPoint, setPoint, colorDistance, getImageData} from "./graphics.mjs";
 
 export function resize (canvas, rect) {
 	const ctx = canvas.getContext("2d");
@@ -362,7 +365,7 @@ export function createDimObj (x, y, width, height, dir) {
 	return obj;
 }
 
-export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"}) {
+export async function joinWhite (canvas, {dir = "h", dst = 30, dst2 = 20, color = "white"}) {
 	const ctx = canvas.getContext("2d");
 	const rgbColor = colorToArray(color);
 	const th = 254;
@@ -407,7 +410,7 @@ export async function joinWhite (canvas, {dir = "h", dst = 30, color = "white"})
 			}
 			lastdist = dist;
 			dist = $.md - start;
-			if (dist > 200) {
+			if (dist > dst2) {
 				return;
 			}
 			if (lastdist === dist) {
@@ -776,7 +779,7 @@ export function replaceColor (canvas, srcColor, destColor, invert = false) {
 		for (let x = 0; x < ref.width; x++) {
 			const d = colorDistance(getPoint(x, y, ref, false), rgb);
 			if (invert ? d > 0 : d < 120) {
-				setPoint(x, y, ref, destColor);
+				setPoint(x, y, ref, destColorArr);
 			}
 		}
 	}
