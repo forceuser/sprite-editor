@@ -949,7 +949,7 @@ export async function convertSprites (sprites) {
 	}
 
 	Object.keys(sprites.index).forEach(key => sprites.index[key].id = key);
-	sprites.order = sprites.order.map(i => i.toString());
+	sprites.order = (sprites.order || []).map(i => i.toString());
 	sprites.version = currentFileVersion;
 	return sprites;
 }

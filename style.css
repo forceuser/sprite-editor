@@ -43,7 +43,7 @@ body {
 
 .button.active {
 	/* background: #444; */
-	filter: brightness(110%);
+	filter       : brightness(110%);
 }
 
 input[type="text"],
@@ -67,8 +67,8 @@ label {
 	display: contents;
 }
 
-label>div,
-label.input-title {
+/* label>div, */
+.input-title {
 	font-weight: bold;
 	padding-top: 0.5em;
 	display    : block;
@@ -238,6 +238,29 @@ hr {
 	font-weight   : bold;
 	padding-bottom: 0.1em;
 	position      : relative;
+	display       : flex;
+}
+
+.action-buttons {
+	font-family: monospace;
+	font-size  : 28px;
+	margin-left: auto;
+	font-weight: 300;
+	display    : flex;
+	align-items: center;
+	height     : 16px;
+}
+
+.action-buttons button {
+	opacity   : 0.4;
+	transition: all 0.3s ease;
+	min-width : 1em;
+	min-height: 1em;
+	display   : inline-block;
+}
+
+.action-buttons button:hover {
+	opacity: 0.7;
 }
 
 .main-buttons {
@@ -374,11 +397,11 @@ hr {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background   : #aaa;
+	background: #aaa;
 }
 
 *:hover::-webkit-scrollbar-thumb {
-	background   : #aaa;
+	background: #aaa;
 }
 
 ::-webkit-scrollbar-thumb:active {
@@ -412,7 +435,7 @@ hr {
 .mainbar-title {
 	position: fixed;
 	top     : 0px;
-
+	z-index : 2000;
 }
 
 .order-button-group span {
@@ -421,4 +444,40 @@ hr {
 	align-items    : center;
 	justify-content: center;
 	text-align     : center;
+}
+
+.colorpicker input {
+	width: 100%;
+}
+
+.colorpicker input[type=color] {
+	width   : 0px;
+	height  : 0px;
+	padding : 0;
+	margin  : 0;
+	border  : 0;
+	position: absolute;
+	z-index : -1;
+	opacity : 0;
+}
+
+.colorpicker {
+	position   : relative;
+	display    : inline-block;
+	font-weight: normal;
+}
+
+.colorpicker .box {
+	position     : absolute;
+	display      : inline-block;
+	z-index      : 1;
+	font-size    : 20px;
+	width        : 1em;
+	height       : 1em;
+	border-radius: 50%;
+	background   : rgba(140, 140, 140, 0.2);
+	right        : 6px;
+	top          : 50%;
+	transform    : translateY(-50%);
+	box-shadow: 0px 0px 3px 3px rgba(128, 128, 128, 0.2);
 }

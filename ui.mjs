@@ -8,7 +8,7 @@ import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
 class $select extends ViewComponent {
 	view (h, d) {
 		return h("label", null, null, h => [
-			...(d.params.title ? [h("div", null, null, d.params.title)] : []),
+			...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
 			h("select", null, () => ({model: d.params.model}),
 				h => (d.params.options || []).map(item => h("option", item.id || item.key, {value: item.id || item.key}, item.value))
 			),
@@ -19,7 +19,7 @@ class $select extends ViewComponent {
 
 class $input extends ViewComponent {
 	view (h, d) {
-		return h("label", null, null, h => {			
+		return h("label", {class: "input-title"}, h => {			
 			return [
 				...(d.params.title ? [h("div", null, null, d.params.title)] : []),
 				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model})),
@@ -28,10 +28,30 @@ class $input extends ViewComponent {
 	}
 }
 
+class $colorpicker extends ViewComponent {
+	view (h, d) {
+		return h("label", {}, h => [		
+			...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
+			h("div", {class: "colorpicker"}, h => [
+				h("input", () => ({attrs: {type: "text"}, model: d.params.model})),
+				h("input", () => ({
+					attrs: {type: "color"}, 
+					params: {value: d.params.model.get()},
+					on: {change: event => d.params.model.set(event.target.value)}
+				})),
+				h("span", () => ({
+					class: "box",
+					style: {background: d.params.model.get()},
+					on: {click: event => event.target.parentNode.querySelector(`input[type="color"]`).click()}
+				})),
+			]),
+		]);
+	}
+}
 class $range extends ViewComponent {
 	view (h, d) {
 		return h("label", {}, h => [
-			h("div", {}, h => `${d.params.title}${d.params.model.get() != null ? `: ${d.params.model.get()}` : ""}`),
+			h("div", {class: "input-title"}, h => `${d.params.title}${d.params.model.get() != null ? `: ${d.params.model.get()}` : ""}`),
 			h("input", () => ({attrs: {type: "range", min: d.params.min, max: d.params.max, step: d.params.step}, model: d.params.model})),
 		]);
 	}
@@ -112,7 +132,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
+				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),
 				h($range, () => ({title: "Размер", min: 0, max: 80, step: 1, model: mod(filter, "size")})),
 				h($range, () => ({title: "Сглаживание", min: 0, max: 5, step: 1, model: mod(filter, "smooth")})),
 				h($checkbox, {title: "Слияние границ по горизонтали", model: mod(filter, "joinWhiteHorisontal")}),
@@ -148,7 +168,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
+				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
@@ -166,8 +186,8 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "Исходный цвет", model: mod(filter, "srcColor")})),
-				h($input, () => ({title: "Цвет для замены", model: mod(filter, "destColor")})),
+				h($colorpicker, () => ({title: "Исходный цвет", model: mod(filter, "srcColor")})),
+				h($colorpicker, () => ({title: "Цвет для замены", model: mod(filter, "destColor")})),
 				h($checkbox, {title: "invert", model: mod(filter, "invert")}),
 			];
 		},
@@ -187,7 +207,7 @@ const schema = {
 		},
 		ui: (h, d, filter) => {			
 			return [
-				h($input, () => ({title: "Цвет", model: mod(filter, "color")})),
+				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),
 				h($input, () => ({title: "padding", model: mod(filter, "padding")})),
 				h($range, () => ({title: "radius", min: 0, max: 64, step: 8, model: mod(filter, "radius")})),
 				h($checkbox, {title: "Квадрат", model: mod(filter, "square")}),
@@ -262,14 +282,34 @@ function addFilter(d, sprite, filterToAdd) {
 	applyFilters(sprite);
 }
 
-function uiForFilter (d, filter, h) {
-	filter = observable(filter);
+function uiForFilter (d, _filter, h) {
+	let filter = observable(_filter);
 	const params = schema[filter.type];
 	const ui = params && params.ui;		
 	return h("section", `filter~${filter.type}~${filter.id}`, {class: ["param-section"]}, h => [
 		h("div", () => ({class: ["param-section-header"]}), h => [
 			h("div", {}, () => schema[filter.type].title || filter.type),
-			h("button", () => ({class: ["close"], on: {click: () => removeFilter(d, filter)}})),
+			h("div", {class: "action-buttons"}, h => [
+				h("button", {
+					on: {click: event => {
+						const idx = d.editing.filters.indexOf(_filter);		
+						d.editing.filters.splice(idx, 1);
+						d.editing.filters.splice(Math.max(0, idx - 1), 0 , _filter);
+						applyFilters(d.editing);
+						setTimeout(() => event.target.closest(".param-section").scrollIntoView({block: "center", behaviour: "smooth"}), 20);
+					}},
+				}, "‹"),
+				h("button",{
+					on: {click: event => {
+						const idx = d.editing.filters.indexOf(_filter);		
+						d.editing.filters.splice(idx, 1);
+						d.editing.filters.splice(Math.min(d.editing.filters.length, idx + 1), 0 , _filter);
+						applyFilters(d.editing);
+						setTimeout(() => event.target.closest(".param-section").scrollIntoView({block: "center", behaviour: "smooth"}), 20);
+					}
+				}}, "›"),
+				h("button", () => ({on: {click: () => removeFilter(d, filter)}}), "×"),
+			]),
 		]),
 		...(ui ? ui(h, d, filter.$$watch) : []),
 	]);	
@@ -397,7 +437,7 @@ async function main () {
 								style: {transform: `rotate(${sprite.params.rotate || 0}deg)`},
 								on: {click: () => editSprite(d, sprite)},					
 							}), h =>
-								h("img", null, () => ({attrs: {src: sprite.dest2x.url, width: sprite.dest2x.width}}))
+								h("img", null, () => (console.log("reset"), {attrs: {src: d.sprites.index[key].dest2x.url, width: d.sprites.index[key].dest2x.width}}))
 							)
 						}),
 					h("div", "block-add", {class: ["sprite-block-add"], on: {click: () => editSprite(d)}}, "Добавить +"),
@@ -411,6 +451,7 @@ async function main () {
 					click: async () => {
 						let sprites = await loadDataFromFile();											
 						d.sprites = sprites;
+						d.editing = null;
 						await dataStore.save(sprites);
 					}
 				}, "Загрузить из файла"),
