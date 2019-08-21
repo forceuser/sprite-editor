@@ -68,6 +68,11 @@ export function cacheable (toCache) {
 
 export {observable, reaction};
 
+function eachCB (list) {
+	list.forEach(cb => cb());
+	list.length = 0;
+}
+
 export function h (type, key, params, content) {
 	if (key != null && typeof key !== "string") {
 		content = params;
@@ -83,6 +88,12 @@ export function h (type, key, params, content) {
 			this.dataNext = {};
 		},
 		end () {
+			Object.keys(this.data).forEach(key => {
+				const cached = this.data[key]
+				if (!this.dataNext.hasOwnProperty(key) && cached.instance) {
+					cached.instance.destroy();
+				}
+			})
 			this.data = this.dataNext;
 		},
 		get (type, key) {
@@ -108,91 +119,61 @@ export function h (type, key, params, content) {
 		}
 
 		key = key == null ? `index:${cache.idx + 1}` : key;
-		let vnode;
+		let cached;
 		if (typeof type === "function" && type.prototype instanceof ViewComponent) {
 			const component = type;
 			type = type.name;
-			let instance;
-			vnode = cache.get(type, key);
-			if (!vnode) {
-				let staticParams;
-				let staticContent;
-				if (typeof params === "function") {
-					// staticParams = params();
-					reaction(() => {			
-						try {
-							const p = params();											
-							instance && instance.setParams(p);
-						}
-						catch (error) {
-							console.log("Error in view:", error);
-						}				
-					});
-				}
-				else {
-					staticParams = params;
-				}
-				if (typeof content === "function") {
-					// staticContent = content();
-					reaction(() => {	
-						try {
-							const c = content();						
-							instance && instance.setContent(c);		
-						}
-						catch (error) {
-							console.log("Error in view:", error);
-						}					
-					});
-				}
-				else {
-					staticContent = content;
-				}
-				instance = new component(h, key, staticParams, staticContent);
-				vnode = instance.render()(vnode);
-				cache.set(type, key, vnode);
+			cached = cache.get(type, key);
+			if (!cached) {
+				cached = {};
+				cached.instance = new component(h, key, params, content);
+				cached.vnode = cached.instance.render()(cached.vnode);
+				cache.set(type, key, cached);
 			}			
 		}
 		else {
-			vnode = cache.get(type, key);
-			if (!vnode) {
-				vnode = h(type, key, params, content)(vnode);
-				cache.set(type, key, vnode);
+			cached = cache.get(type, key);
+			if (!cached) {
+				cached = {};
+				cached.vnode = h(type, key, params, content)(cached.vnode, childH.onremove);
+				cache.set(type, key, cached);
 			}
 		}
-		return vnode;
-
+		return cached && cached.vnode;
 	}
+
+	childH.onremove = [];
 
 	let staticContent;
 	if (typeof content !== "function") {
 		staticContent = content;
 	}
 
-	return vnode => {
+	return (vnode, onremove) => {
 		let isStaticParams = typeof params !== "function";
 
 		const create = (emptyNode, vnode) => {
 			if (typeof content === "function") {
 				let contentVNode = vnode;				
-				reaction(() => {
+				const updatable = reaction(() => {
 					cache.start();
 					try {
-						// console.log("patch content", key);
 						let cont = content(childH);
-						// if (Array.isArray(cont)) {
-						// 	cont = flattenDeep(cont);						
-						// }
 						contentVNode = $patch(contentVNode, snabbdom.h(type, contentVNode.data, cont));
 					}
 					catch (error) {
 						console.log("Error in view:", error);
 					}	
 					cache.end();
-				});				
+				});		
+				onremove && onremove.push(() => {
+					// console.log("updatable uninit -- content", vnode);
+					updatable.uninit();
+				});
 			}
 			let paramsVNode = vnode;
 			if (!isStaticParams) {
-				reaction(() => {
+				const updatable = reaction(() => {
 					try {
 						const p = getParams(params, key);
 						// console.log("patch params", key);
@@ -200,12 +181,26 @@ export function h (type, key, params, content) {
 					}
 					catch (error) {
 						console.log("Error in view:", error);
-					}	
+					}
+				});
+				onremove && onremove.push(() => {
+					// console.log("updatable uninit -- params", vnode);
+					updatable.uninit();
 				});
 			}
+			onremove && onremove.push(() => {
+				// console.log("uninit childs", vnode, childH.onremove.length);
+				eachCB(childH.onremove);
+			});
 		}
 
-		let $params = {key, hook: {create}};
+		const remove = (vnode, removeCallback) => {
+			console.log("remove", vnode);
+			eachCB(childH.onremove);
+			removeCallback();
+		}
+
+		let $params = {key, hook: {create, remove}};
 		if (params && isStaticParams) {
 			$params = Object.assign($params, params);
 		}
@@ -224,10 +219,46 @@ export function h (type, key, params, content) {
 
 export class ViewComponent {
 	constructor (h, key, params, content) {
+		let staticParams;
+		let staticContent;
+		this.onremove = [];
+		if (typeof params === "function") {
+			// staticParams = params();
+			const updatable = reaction(() => {			
+				try {
+					const p = params();											
+					this && this.setParams(p);
+				}
+				catch (error) {
+					console.log("Error in view:", error);
+				}				
+			});
+			this.onremove.push(() => updatable.uninit());
+		}
+		else {
+			staticParams = params;
+		}
+		if (typeof content === "function") {
+			// staticContent = content();
+			const updatable = reaction(() => {	
+				try {
+					const c = content();						
+					this && this.setContent(c);		
+				}
+				catch (error) {
+					console.log("Error in view:", error);
+				}					
+			});
+			this.onremove.push(() => updatable.uninit());
+		}
+		else {
+			staticContent = content;
+		}
+
 		this.d = observable({});
 		this.key = key;
-		this.d.params = params || {};
-		this.d.content = content;
+		this.d.params = staticParams || {};
+		this.d.content = staticContent;
 		this.render = () => this.view(h, this.d);
 	}
 	setParams (params) {
@@ -238,6 +269,9 @@ export class ViewComponent {
 	}
 	view (h, d) {
 		return;
+	}
+	destroy () {
+		eachCB(this.onremove);
 	}
 }
 

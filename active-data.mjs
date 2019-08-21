@@ -324,7 +324,7 @@ export class Manager {
 
 		const updatableFunction = function () {
 			if (!updatableState.active) {
-				return fn.call(this, this);
+				return;// fn.call(this, this);
 			}
 			if (updatableState.computing) {
 				console.warn(

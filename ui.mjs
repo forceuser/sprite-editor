@@ -37,7 +37,8 @@ class $colorpicker extends ViewComponent {
 				h("input", () => ({
 					attrs: {type: "color"}, 
 					params: {value: d.params.model.get()},
-					on: {change: event => d.params.model.set(event.target.value)}
+					// on: {change: event => d.params.model.set(event.target.value)},
+					model: d.params.model,
 				})),
 				h("span", () => ({
 					class: "box",
@@ -48,6 +49,7 @@ class $colorpicker extends ViewComponent {
 		]);
 	}
 }
+
 class $range extends ViewComponent {
 	view (h, d) {
 		return h("label", {}, h => [
