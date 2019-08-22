@@ -68,10 +68,16 @@ label {
 }
 
 /* label>div, */
-.input-title {
+.input-title {	
 	font-weight: bold;
 	padding-top: 0.5em;
 	display    : block;
+}
+
+label input, 
+label select, 
+label textarea{
+	width: 100%;	
 }
 
 select,

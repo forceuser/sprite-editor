@@ -7,7 +7,7 @@ import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
 
 class $select extends ViewComponent {
 	view (h, d) {
-		return h("label", null, null, h => [
+		return h("label", {}, h => [
 			...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
 			h("select", null, () => ({model: d.params.model}),
 				h => (d.params.options || []).map(item => h("option", item.id || item.key, {value: item.id || item.key}, item.value))
@@ -19,9 +19,9 @@ class $select extends ViewComponent {
 
 class $input extends ViewComponent {
 	view (h, d) {
-		return h("label", {class: "input-title"}, h => {			
+		return h("label", {}, h => {			
 			return [
-				...(d.params.title ? [h("div", null, null, d.params.title)] : []),
+				...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
 				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model})),
 			];		
 		});
@@ -72,7 +72,7 @@ class $checkbox extends ViewComponent {
 
 class $button extends ViewComponent {
 	view (h, d) {		
-		return h("button", () => ({class: {"button": true, active: d.params.active} , attrs: {type: "button"}, on: {click: d.params.click}}), () => d.content);
+		return h("button", () => (Object.assign({class: {"button": true, active: d.params.active} , attrs: {type: "button"}, on: {click: d.params.click}}, d.params.other || {})), () => d.content);
 	}
 }
 
@@ -211,7 +211,7 @@ const schema = {
 			return [
 				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),
 				h($input, () => ({title: "padding", model: mod(filter, "padding")})),
-				h($range, () => ({title: "radius", min: 0, max: 64, step: 8, model: mod(filter, "radius")})),
+				h($range, () => ({title: "radius", min: 0, max: 128, step: 8, model: mod(filter, "radius")})),
 				h($checkbox, {title: "Квадрат", model: mod(filter, "square")}),
 				h($checkbox, {title: "Центрировать", model: mod(filter, "center")}),
 				h($checkbox, {title: "Использовать как маску", model: mod(filter, "mask")}),
@@ -293,6 +293,7 @@ function uiForFilter (d, _filter, h) {
 			h("div", {}, () => schema[filter.type].title || filter.type),
 			h("div", {class: "action-buttons"}, h => [
 				h("button", {
+					style: {transform: "rotate(90deg)"},
 					on: {click: event => {
 						const idx = d.editing.filters.indexOf(_filter);		
 						d.editing.filters.splice(idx, 1);
@@ -302,6 +303,7 @@ function uiForFilter (d, _filter, h) {
 					}},
 				}, "‹"),
 				h("button",{
+					style: {transform: "rotate(90deg)"},
 					on: {click: event => {
 						const idx = d.editing.filters.indexOf(_filter);		
 						d.editing.filters.splice(idx, 1);
@@ -327,7 +329,7 @@ function uiForParams (d, h) {
 			h($select, () => ({title: "категория", options: d.categories, model: mod(d.editing.params, "category")})),
 			h($range, () => ({title: "поворот", min: -30, max: 30, model: mod(d.editing.params, "rotate")})),
 			h("label", {class: "input-title"}, "порядок"),
-			h("div", {class: ["button-group", "order-button-group"]}, [
+			h("div", {class: ["button-group", "order-button-group"]}, h => [
 				h($button, {click: () => {
 					const idx = d.sprites.order.indexOf(d.editing.id);		
 					d.sprites.order.splice(idx, 1);
