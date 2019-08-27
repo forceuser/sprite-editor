@@ -359,7 +359,7 @@
 					scrollDown = top - prevScrollPos >= 0;
 					prevScrollPos = top;
 				});
-				headerBlock.addEventListener("click", () => {
+				document.body.addEventListener("click", () => {
 					alert("fullscreen");
 					document.body.requestFullscreen();
 				});
