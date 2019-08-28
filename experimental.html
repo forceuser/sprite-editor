@@ -27,10 +27,62 @@
 				const max = Math.max(x1, x2);
 				const limitedX = Math.max(min, Math.min(max, x));
 				return line(limitedX, x1, y1, x2, y2, easingFn);
-			};
+			}
+
+			function cycle (value, max, min = 0) {
+				value = value - min;
+				return (value < 0 ? ((max + (value % max)) % max) : value % max) + min;
+			}
 
 			function toArray(arrayLike) {
 				return Array.prototype.slice.call(arrayLike);
+			}
+
+			function animate (duration, onStep, onEnd) {
+				var startTime = +(new Date());
+				var endTime = startTime + duration;
+				var canceled = false;
+
+				function step() {
+					if (!canceled) {
+						var time = +(new Date());
+						var val = Math.min(duration, (time - startTime) / duration);
+						onStep(val);
+						if (time <= endTime) {
+							requestAnimationFrame(step);
+						}
+						else {
+							onEnd && onEnd();
+						}
+					}
+					else {
+						onEnd && onEnd();
+					}
+				}
+				step();
+				return function() {
+					canceled = true;
+				}
+			}
+
+			const easing = {
+				easeOutQuad: function (pos) {
+					return -(Math.pow((pos - 1), 2) - 1);
+				},
+				easeOutExpo: function (pos) {
+					return (pos === 1) ? 1 : -Math.pow(2, -10 * pos) + 1;
+				},
+				bounce: function (pos) {
+					if (pos < (1 / 2.75)) {
+						return (7.5625 * pos * pos);
+					} else if (pos < (2 / 2.75)) {
+						return (7.5625 * (pos -= (1.5 / 2.75)) * pos + 0.75);
+					} else if (pos < (2.5 / 2.75)) {
+						return (7.5625 * (pos -= (2.25 / 2.75)) * pos + 0.9375);
+					} else {
+						return (7.5625 * (pos -= (2.625 / 2.75)) * pos + 0.984375);
+					}
+				}
 			}
 
 			function initSlider($slider) {
@@ -144,46 +196,9 @@
 					}
 				}
 
-				function easeOutQuad(pos) {
-					return -(Math.pow((pos - 1), 2) - 1);
-				}
 
-				function easeOutExpo(pos) {
-					return (pos === 1) ? 1 : -Math.pow(2, -10 * pos) + 1;
-				}
 
-				function bounce(pos) {
-					if (pos < (1 / 2.75)) {
-						return (7.5625 * pos * pos);
-					} else if (pos < (2 / 2.75)) {
-						return (7.5625 * (pos -= (1.5 / 2.75)) * pos + 0.75);
-					} else if (pos < (2.5 / 2.75)) {
-						return (7.5625 * (pos -= (2.25 / 2.75)) * pos + 0.9375);
-					} else {
-						return (7.5625 * (pos -= (2.625 / 2.75)) * pos + 0.984375);
-					}
-				}
 
-				function animate(duration, onStep) {
-					var startTime = +(new Date());
-					var endTime = startTime + duration;
-					var canceled = false;
-
-					function step() {
-						if (!canceled) {
-							var time = +(new Date());
-							var val = Math.min(duration, (time - startTime) / duration);
-							onStep(val);
-							if (time <= endTime) {
-								requestAnimationFrame(step);
-							}
-						}
-					}
-					step();
-					return function() {
-						canceled = true;
-					}
-				}
 
 				function dragEnd(event) {
 					if (startPoint) {
@@ -200,9 +215,9 @@
 						pos = -activeSlideIdx;
 						var startPos = lastPos;
 						var endPos = pos;
-						var duration = lineLimit(Math.abs(lastPos - pos), 0, 100, 1, 300, easeOutExpo); // 400;// Math.max(0.3, Math.min(0.7, Math.abs((lastPos - pos) / 2))) * 1000;
+						var duration = lineLimit(Math.abs(lastPos - pos), 0, 100, 1, 300, easing.easeOutExpo); // 400;// Math.max(0.3, Math.min(0.7, Math.abs((lastPos - pos) / 2))) * 1000;
 						animation = animate(duration, function(val) {
-							pos = lineLimit(val, 0, startPos, 1, endPos, easeOutExpo);
+							pos = lineLimit(val, 0, startPos, 1, endPos, easing.easeOutExpo);
 							var _activeSlideIdx = Math.max(0, Math.min($slides.length - 1, Math.round(-pos)));
 							if (_activeSlideIdx !== _lastActiveSlideIdx) {
 								_lastActiveSlideIdx = _activeSlideIdx;
@@ -255,6 +270,7 @@
 
 				const rect = headerBlockWrapper.getBoundingClientRect();
 				const headerBlockRect = headerBlock.getBoundingClientRect();
+				const rectTop = rect.top + window.pageYOffset;
 				const height = rect.height;
 
 				headerBlockWrapper.style.width = rect.width + "px";
@@ -267,13 +283,11 @@
 					return window.pageYOffset || document.documentElement.scrollTop;
 				}
 				let prevScrollPos = getScroll();
-				function animate (cb) {
-
-				}
 				const body = document.body;
 				const html = document.documentElement;
 				let state = "up";
 				let scrollDown = true;
+				let shift = 60;
 
 				let touchScrolling = false;
 				let touching = false;
@@ -282,73 +296,131 @@
 				let scrolling = false;
 				let onEndSrolling;
 				let tmt;
+				let scrollUpTime;
+				let scrollAnimation;
 
+				function resetScroll (callback) {
+					// document.documentElement.style.overflow = "hidden";
+					document.documentElement.style.setProperty("-webkit-overflow-scrolling", "auto");
+					callback();
+					// setTimeout(() => {
+					// 	// document.documentElement.style.overflow = "";
+					// 	document.documentElement.style.setProperty("-webkit-overflow-scrolling", "");
+					// }, 150);
+				}
+
+				function scrollTo (top, behavior) {
+
+					window.scrollTo(0, top);
+					// window.scrollY = top;
+
+				}
+				let points;
+				let plan;
 				function scrollDetector () {
+					const time = +(new Date());
 					dtop = getScroll();
-					headerBlock.style.opacity = line(dtop, 0, 1, height, 0);
-					pageTitle.style.opacity = line(dtop, 0, 0, height, 0.9);
+					headerBlock.style.opacity = line(dtop, 0, 1, rectTop + height - shift, 0);
+					pageTitle.style.opacity = line(dtop, 0, 0, rectTop + height - shift, 0.9);
+					if (points) {
+						if (scrolling) {
+							const point = {time, top: dtop};
+							const prev = points[points.length - 1];
+							points.push(point);
+							if (prev) {
+								point.ds = (point.top - prev.top);
+								point.dt = Math.round((point.time - prev.time) / 5) * 5;
+								point.v = point.ds / point.dt;
+							}
+							if (points.length === 16) {
+								plan = line(Math.abs(0.3 / Math.pow(points[10].v, 2)), Math.abs(points[3].v), points[3].top, Math.abs(points[15].v), points[15].top);
+								console.log("plan", plan);
+								console.log("points", points);
+								points = null;
+							}
+						}
+						else {
+							points = null;
+						}
+					}
 					if (dtop !== dtopPrev) {
-						dtopPrev = dtop;
+
 						scrolling = true;
 						clearTimeout(tmt);
 						tmt = null;
 					}
-					else if (scrolling && !touching) {
+					else if (scrolling) {
 						scrolling = false;
-						tmt = setTimeout(() => {
-							onEndSrolling && onEndSrolling();
-						}, 0);
+						setTimeout(() => {
+							console.log("dest", getScroll());
+						}, 50);
 					}
+
+					if (onEndSrolling && (dtop - dtopPrev < 0.1) && !touching) {
+						onEndSrolling(plan);
+						plan = null;
+					}
+					dtopPrev = dtop;
 					requestAnimationFrame(scrollDetector);
 				}
 				scrollDetector();
 
 				window.addEventListener("touchstart", () => {
 					touching = true;
+					scrollAnimation && scrollAnimation();
+					scrollAnimation = null;
 				});
+
+				function animateScroll(top) {
+					scrollAnimation && scrollAnimation();
+					scrollAnimation = null;
+					resetScroll(() => {
+						const startPos = getScroll();
+						const endPos = top;
+						scrollAnimation = animate(250, function (val) {
+							const pos = lineLimit(val, 0, startPos, 1, endPos, easing.easeOutExpo);
+							scrollTo(pos);
+						}, function () {
+							scrollAnimation = animate(650, function (val) {
+								scrollTo(endPos);
+							});
+						});
+					});
+				}
 
 				window.addEventListener("touchend", () => {
 					touching = false;
-					onEndSrolling = () => {
-						if (touchScrolling) {
-							const top = getScroll();
-							touchScrolling = false;
+
+					if (touchScrolling) {
+						scrollUpTime = +(new Date());
+						points = [];
+						touchScrolling = false;
+						onEndSrolling = (plan) => {
+							const top = plan == null ? getScroll() : plan;
 							if (scrollDown) {
-								if (top > (height * 1/4)) {
-									if (top < height - 50) {
-										document.body.style.overflow = "hidden";
-										setTimeout(() => {
-											document.body.style.overflow = "";
-											window.scrollTo({top: height - 50, behavior: "smooth"});
-										});
+								if (top > 0) {
+									if (top < height - shift + rectTop) {
+										animateScroll(height - shift + rectTop) ;
+										onEndSrolling = null;
 									}
 								}
 								else {
-									document.body.style.overflow = "hidden";
-									setTimeout(() => {
-										document.body.style.overflow = "";
-										window.scrollTo({top: 0, behavior: "smooth"});
-									});
+									animateScroll(0);
+									onEndSrolling = null;
 								}
 							}
 							else if (!scrollDown) {
-								if (top < (height * 9/10)) {
-									document.body.style.overflow = "hidden";
-									setTimeout(() => {
-										document.body.style.overflow = "";
-										window.scrollTo({top: 0, behavior: "smooth"});
-									});
+								if (top < (height - shift + rectTop)) {
+									animateScroll(0);
+									onEndSrolling = null;
 								}
-								else if (top < height - 50) {
-									document.body.style.overflow = "hidden";
-									setTimeout(() => {
-										document.body.style.overflow = "";
-										window.scrollTo({top: height - 50, behavior: "smooth"});
-									});
-								}
+								// else if (top === (height - shift + rectTop)) {
+								// 	animateScroll(height - shift + rectTop) ;
+								// 	onEndSrolling = null;
+								// }
 							}
 						}
-					};
+					}
 				});
 
 				window.addEventListener("scroll", event => {
@@ -359,11 +431,8 @@
 					scrollDown = top - prevScrollPos >= 0;
 					prevScrollPos = top;
 				});
-				document.body.addEventListener("click", () => {
-					alert("fullscreen");
-					document.body.requestFullscreen();
-				});
-				
+
+				// document.body.requestFullscreen();
 			});
 		</script>
 	</head>
@@ -373,7 +442,7 @@
 			<div class="page-title" style="position: fixed; z-index: 1000; opacity: 0; font-weight: 600; width: 100%; top: 0px; left: 0px; padding: 19px; background: #000; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.3);">
 				Картка monobank
 			</div>
-			<div class="content-block header-block-wrapper">
+			<div class="content-block header-block-wrapper" style="margin-top: 50px;">
 				<div class="header-block">
 					<div class="xcontent-block">
 						<div class="main-image-container">
