@@ -1,6 +1,6 @@
 import {mod} from "./model.mjs";
 import {default as dataStore} from "./data.mjs";
-import {loadDataFromFile, saveDataToFile, convertSprites, crop, roundRect, growEx, removeRest, joinWhite, fill, tint, replaceColor} from "./sprite-editor.mjs";
+import {loadDataFromFile, saveDataToFile, convertSprites, crop, roundRect, roundRectCustom, growEx, removeRest, joinWhite, fill, tint, replaceColor} from "./sprite-editor.mjs";
 import {h, observable, reaction, cacheable, ViewComponent, classList} from "./view.mjs";
 import {imageToCanvas, loadImage, createCanvas, toDPR, copyCanvas, Rect, doPadding} from "./graphics.mjs";
 import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
@@ -199,6 +199,38 @@ const schema = {
 			}
 		}
 	},
+	rectCustom: {
+		title: "Подложка произвольного размера",
+		defaultValues: {
+			radius: 16,
+			margin: 0,
+			color: "#fff",		
+			top: 0,
+			left: 0,
+			width: 100,
+			height: 100,
+		},
+		ui: (h, d, filter) => {			
+			return [
+				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),				
+				h($input, () => ({title: "radius", model: mod(filter, "radius")})),
+				h($input, () => ({title: "margin", model: mod(filter, "margin")})),
+				h($range, () => ({title: "top", min: -50, max: 150, step: 1, model: mod(filter, "top")})),
+				h($range, () => ({title: "left", min: -50, max: 150, step: 1, model: mod(filter, "left")})),
+				h($range, () => ({title: "height", min: -50, max: 150, step: 1, model: mod(filter, "height")})),
+				h($range, () => ({title: "width", min: -50, max: 150, step: 1, model: mod(filter, "width")})),
+			];
+		},
+		apply: async (filter, canvas, srcImg) => {			
+			const color = filter.color;
+			
+			roundRectCustom(canvas, {top: filter.top, left: filter.left, height: filter.height, width: filter.width}, {				
+				color,				
+				margin: filter.margin,
+				radius: filter.radius,				
+			});
+		}
+	},
 	rect: {
 		title: "Подложка",
 		defaultValues: {
@@ -219,13 +251,14 @@ const schema = {
 			];
 		},
 		apply: async (filter, canvas, srcImg) => {
+			// console.log("crop", canvas.width, canvas.height);
 			const color = filter.color;
-			let rh = Math.max(canvas.height, canvas.width / 4.5);
-			if (rh > canvas.width * 0.65) {
-				rh = canvas.width;
-			}
+			// let rh = Math.max(canvas.height, canvas.width / 4.5);
+			// if (rh > canvas.width * 0.65) {
+			// 	rh = canvas.width;
+			// }
 			
-			roundRect(canvas, new Rect({height: rh}), {
+			roundRect(canvas, new Rect({height: canvas.height}), {
 				// color: color2,
 				color,
 				padding: doPadding(filter.padding),
@@ -241,6 +274,7 @@ const schema = {
 		title: "Обрезать лишнее",
 		apply: async (filter, canvas, srcImg) => {			
 			await crop(canvas);
+			console.log("crop", canvas.width, canvas.height);
 		},
 	},
 };

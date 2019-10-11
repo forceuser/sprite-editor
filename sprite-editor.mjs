@@ -7,7 +7,7 @@ import {
 
 export function resize (canvas, rect) {
 	const ctx = canvas.getContext("2d");
-	const ref = ctx.getImageData(0, 0, canvas.width, canvas.height);
+	// const ref = ctx.getImageData(0, 0, canvas.width, canvas.height);
 	const cpy = copyCanvas(canvas);
 
 	const w = canvas.width;
@@ -16,6 +16,12 @@ export function resize (canvas, rect) {
 	canvas.height = Math.max(canvas.height, rect.bottom - rect.top);
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.drawImage(cpy, 0, 0, w, h, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+}
+
+export function resizeMargin (canvas, rect) {	
+	canvas.width = canvas.width + rect.right + rect.left;
+	canvas.height = canvas.height + rect.bottom + rect.top;		
+	// ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 export function roundRect (canvas, rect, {radius = 0, padding = 0, color = "white", square, center, fancyRadius = false, mask = false} = {}) {
@@ -68,6 +74,50 @@ export function roundRect (canvas, rect, {radius = 0, padding = 0, color = "whit
 		ctx.globalCompositeOperation = "source-in";
 	}
 	ctx.drawImage(cpy, center ? (canvas.width - cpy.width) / 2 : padding[3], center ? (canvas.height - cpy.height) / 2 : padding[0]);
+	ctx.restore();
+}
+
+export function roundRectCustom (canvas, rect, {radius = 0, color = "white", margin = 0} = {}) {
+	function perc (value, total) {
+		return total / 100 * parseFloat(value);
+	}
+
+	radius = doPadding(radius);	
+	margin = doPadding(margin);	
+	rect.top = perc(rect.top, canvas.height);
+	rect.left = perc(rect.left, canvas.width);
+	rect.width = perc(rect.width, canvas.width);
+	rect.height = perc(rect.height, canvas.height);
+	rect.right = rect.left + rect.width;
+	rect.bottom = rect.top + rect.height;
+
+	const cpy = copyCanvas(canvas);
+	const ctx = canvas.getContext("2d");
+	
+	radius = correctRadius(radius, rect.width, rect.height);	
+	const marginRect = {
+		top: perc(margin[0], canvas.height),
+		right: perc(margin[1], canvas.width),
+		bottom: perc(margin[2], canvas.height),
+		left: perc(margin[3], canvas.width),
+	}
+	resizeMargin(canvas, marginRect);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	ctx.beginPath();
+	ctx.moveTo(rect.left + marginRect.left, rect.top + marginRect.top);
+	ctx.arcTo(rect.right + marginRect.left, rect.top + marginRect.top, rect.right + marginRect.left, rect.bottom + marginRect.top, radius[1]);
+	ctx.arcTo(rect.right + marginRect.left, rect.bottom + marginRect.top, rect.left + marginRect.left, rect.bottom + marginRect.top, radius[2]);
+	ctx.arcTo(rect.left + marginRect.left, rect.bottom + marginRect.top, rect.left + marginRect.left, rect.top + marginRect.top, radius[3]);
+	ctx.arcTo(rect.left + marginRect.left, rect.top + marginRect.top, rect.right + marginRect.left, rect.top + marginRect.top, radius[0]);
+
+
+	ctx.closePath();
+	ctx.fillStyle = color;
+	ctx.fill();
+	ctx.save();
+
+	ctx.drawImage(cpy, 0, 0, cpy.width, cpy.height, marginRect.left, marginRect.top, cpy.width, cpy.height);
 	ctx.restore();
 }
 
