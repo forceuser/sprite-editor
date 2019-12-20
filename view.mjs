@@ -217,6 +217,23 @@ export function h (type, key, params, content) {
 }
 
 
+export function accessor (getterFn, setterFn) {
+	return new Proxy ({}, {
+		get: (target, propertyKey, context) => {
+			if (getterFn) {
+				const value = getterFn(propertyKey);
+				return typeof value === "object" ? value[propertyKey] : value;
+			}
+			return undefined;
+		},
+		set: (target, propertyKey, value, context) => {
+			if (setterFn) {
+				setterFn(propertyKey, value);
+			}
+		},
+	});
+}
+
 export class ViewComponent {
 	constructor (h, key, params, content) {
 		let staticParams;

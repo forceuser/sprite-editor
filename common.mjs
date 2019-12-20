@@ -23,17 +23,32 @@ export function clone (obj) {
 }
 
 export function transformKey (key, {format = "capitalize", delimiter = ""} = {}) {
-	const parts = key.toLowerCase().split(/[A-Z-_]/g);
+	let parts;
+	if (key.match(/\s+/)) {
+		parts = key.toLowerCase().split(/\s+/g);
+	}
+	else {
+		if ((key.toLowerCase() !== key.toUpperCase())) {
+			parts = key.split(/(\p{Lu}|[-_]|\s+)/gu);
+		}
+		else {
+			parts = key.toLowerCase().split(/([-_]|\s+)/g);
+		}
+	}
+	
 	return parts.map((part, idx) => {
 		switch (format) {
-			case "lowercase": {
+			case "lower": {
 				return part.toLowerCase();
 			}
-			case "uppercase": {
+			case "upper": {
 				return part.toUpperCase();
 			}
-			case "capitalize": {
+			case "camel": {
 				return idx > 0 ? part.substr(0, 1).toUpperCase() + part.substr(1) : part;
+			}
+			case "capital": {
+				return part.substr(0, 1).toUpperCase() + part.substr(1);
 			}
 		}
 	}).join(delimiter);

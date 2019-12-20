@@ -308,6 +308,17 @@ function removeFilter (d, filter) {
 	applyFilters(d.editing);
 }
 
+async function reloadSpriteImage (d, sprite) {	
+	const width = 240;
+	const files = await openFile();
+	const file = files[0];
+	const url = await readFile(file, "blobUrl");
+	const img = await loadImage(url, {width: width * dpr});
+	const name = (file.name || "").replace(/([^\/\\]+)$/, "$1").split(".")[0];
+	// console.log("sprite.src", sprite.src);
+	sprite.src = {url: imageToCanvas(img).toDataURL("image/png"), w: img.width, h: img.height};
+	applyFilters(sprite);
+}
 
 function addFilter(d, sprite, filterToAdd) {	
 	sprite.filters = sprite.filters || [];
@@ -377,6 +388,7 @@ function uiForParams (d, h) {
 				}}, "›"),
 			]),
 			h($button, {click: () => removeSprite(d, d.editing)}, "Удалить"),
+			h($button, {click: () => reloadSpriteImage(d, d.editing)}, "Заменить изображение"),
 		])
 	];
 }
