@@ -330,7 +330,16 @@ function addFilter(d, sprite, filterToAdd) {
 }
 
 function uiForFilter (d, _filter, h) {
+	const item = d.editing;
 	let filter = observable(_filter);
+	let t;
+	reaction(() => {
+		clearTimeout(t);
+		filter.$$watchDeep;
+		t = setTimeout(() => {
+			applyFilters(d.editing);
+		}, 100);
+	})
 	const params = schema[filter.type];
 	const ui = params && params.ui;		
 	return h("section", `filter~${filter.type}~${filter.id}`, {class: ["param-section"]}, h => [
