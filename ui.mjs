@@ -9,7 +9,7 @@ class $select extends ViewComponent {
 	view (h, d) {
 		return h("label", {}, h => [
 			...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
-			h("select", null, () => ({model: d.params.model}),
+			h("select", null, () => ({model: d.params.model, on: d.params.on}),
 				h => (d.params.options || []).map(item => h("option", item.id || item.key, {value: item.id || item.key}, item.value))
 			),
 		]);
@@ -22,7 +22,7 @@ class $input extends ViewComponent {
 		return h("label", {}, h => {			
 			return [
 				...(d.params.title ? [h("div", {class: "input-title"}, d.params.title)] : []),
-				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model})),
+				h("input", null, () => ({attrs: {type: "text"}, model: d.params.model, on: d.params.on})),
 			];		
 		});
 	}
@@ -379,7 +379,10 @@ function uiForParams (d, h) {
 		h("section", "param-section", {class: ["param-section"]}, h => [					
 			// h($input, () => ({title: "id", model: mod(d.editing, "id")})),
 			h($input, () => ({title: "имя", model: mod(d.editing, "name")})),
-			h($input, () => ({title: "url", model: mod(d.editing.params, "url")})),
+			h($input, () => ({title: "url", model: mod(d.editing.params, "url"), on: {input: event => {
+				const val = event.target.value || "";
+				d.editing.name = val.replace(/^.*\:\/\//, "").replace(/[.,+=:_]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase();
+			}}})),
 			h($select, () => ({title: "категория", options: d.categories, model: mod(d.editing.params, "category")})),
 			h($range, () => ({title: "поворот", min: -30, max: 30, model: mod(d.editing.params, "rotate")})),
 			h("label", {class: "input-title"}, "порядок"),
@@ -452,7 +455,9 @@ async function editSprite (d, sprite) {
 			id: (++d.sprites.id).toString(),
 			name,
 			src: {url: imageToCanvas(img).toDataURL("image/png"), w: img.width, h: img.height},
-			params: {},
+			params: {
+				category: d.category === "all" ? null : d.category
+			},
 			filters: [				
 				// {type: "main", rotate: 0, scale: 1, url: "https://welovemebel.com.ua/"},
 				// {type: "temp"},
@@ -474,7 +479,7 @@ async function main () {
 	const sprites = await convertSprites(await dataStore.load());
 	const d = observable({
 		sprites,
-		category: "all",
+		category: localStorage.category || "all",
 		mode: "desktop",
 		categories: [
 			{id: "electronic", value: "Электроника"},
@@ -485,7 +490,9 @@ async function main () {
 			{id: "other", value: "Другое"},
 		],
 	});
-
+	reaction(async () => {
+		localStorage.category = d.category;
+	});
 	reaction(async () => {
 		await dataStore.save(clone(d.sprites.$$watchDeep));
 	});
@@ -500,7 +507,7 @@ async function main () {
 				h("div", "mainbar-content", () => ({class: classList(["mainbar-content"], {mobile: d.mode === "mobile"})}), h => [
 					...toArray(d.sprites.index.$$watch)
 						.filter(i => d.category === "all" || i.value.params.category === d.category)
-						.sort((a, b) => d.sprites.order.indexOf(a.value.id) -  d.sprites.order.indexOf(b.value.id))
+						.sort((a, b) => d.sprites.order.indexOf(a.value.id) - d.sprites.order.indexOf(b.value.id))
 						.map(({key, value}) => {
 							const sprite = value;
 							return h("div", key, () => ({
@@ -518,7 +525,12 @@ async function main () {
 		]),
 		h("div", "sidebar", {class: ["sidebar"]}, h => [
 			h("section", "sect1", {class: ["param-section", "main-buttons"]}, h => [
-				h($select, () => ({title: "Категория", model: mod(d, "category"), options: [{id: "all", value: "все"}, ...d.categories]})),
+				h($select, () => ({
+					title: "Категория", 
+					model: mod(d, "category"), 
+					options: [{id: "all", value: "все"}, 
+					...d.categories
+				]})),
 				h($button, {
 					click: async () => {
 						let sprites = await loadDataFromFile();											

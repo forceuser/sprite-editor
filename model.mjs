@@ -1,4 +1,4 @@
-import {get, set} from "./access.mjs";
+import {get as _get, set as _set} from "./access.mjs";
 
 function factory (mode) {
 	return (oldVnode, vnode) => {
@@ -47,11 +47,11 @@ function factory (mode) {
 
 export function mod (src, path, init) {
 	if (init) {
-		set(src, path, init(src));
+		_set(src, path, init(src));
 	}
 	return {
-		get: () => get(src, path),
-		set: (value) => set(src, path, value),
+		get: () => _get(src, path),
+		set: (value) => _set(src, path, value),
 	};
 }
 
