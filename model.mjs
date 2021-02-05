@@ -45,7 +45,10 @@ function factory (mode) {
 	}
 }
 
-export function mod (src, path) {
+export function mod (src, path, init) {
+	if (init) {
+		set(src, path, init(src));
+	}
 	return {
 		get: () => get(src, path),
 		set: (value) => set(src, path, value),

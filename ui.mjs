@@ -389,7 +389,17 @@ function uiForParams (d, h) {
 					d.sprites.order.splice(idx, 1);
 					d.sprites.order.splice(Math.max(0, idx - 1), 0 , d.editing.id);
 				}}, "‹"),
-				h("span", {}, () => d.sprites.order.indexOf(d.editing.id)),
+				h("input", "order-input", () => ({
+					style: {"text-align": "center", "width": "100%", "flex": "1"},
+					model: {
+						set: (value) => {
+							const idx = d.sprites.order.indexOf(d.editing.id);	
+							d.sprites.order.splice(idx, 1);
+							d.sprites.order.splice(Math.min(d.sprites.order.length, value || 0), 0 , d.editing.id);
+						},
+						get: () => d.sprites.order.indexOf(d.editing.id),
+					},
+				})),
 				h($button, {click: () => {
 					const idx = d.sprites.order.indexOf(d.editing.id);		
 					d.sprites.order.splice(idx, 1);
