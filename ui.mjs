@@ -474,6 +474,7 @@ async function main () {
 	const sprites = await convertSprites(await dataStore.load());
 	const d = observable({
 		sprites,
+		category: "all",
 		mode: "desktop",
 		categories: [
 			{id: "electronic", value: "Электроника"},
@@ -498,6 +499,7 @@ async function main () {
 			h("div", () => ({class: classList("mainbar-content-wrapper", {mobile: d.mode})}), h => [
 				h("div", "mainbar-content", () => ({class: classList(["mainbar-content"], {mobile: d.mode === "mobile"})}), h => [
 					...toArray(d.sprites.index.$$watch)
+						.filter(i => d.category === "all" || i.value.params.category === d.category)
 						.sort((a, b) => d.sprites.order.indexOf(a.value.id) -  d.sprites.order.indexOf(b.value.id))
 						.map(({key, value}) => {
 							const sprite = value;
@@ -516,6 +518,7 @@ async function main () {
 		]),
 		h("div", "sidebar", {class: ["sidebar"]}, h => [
 			h("section", "sect1", {class: ["param-section", "main-buttons"]}, h => [
+				h($select, () => ({title: "Категория", model: mod(d, "category"), options: [{id: "all", value: "все"}, ...d.categories]})),
 				h($button, {
 					click: async () => {
 						let sprites = await loadDataFromFile();											
