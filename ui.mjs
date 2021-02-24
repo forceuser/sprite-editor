@@ -383,7 +383,26 @@ function uiForParams (d, h) {
 				const val = event.target.value || "";
 				d.editing.name = val.replace(/^.*\:\/\//, "").replace(/[.,+=:_]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase();
 			}}})),
-			h($select, () => ({title: "категория", options: d.categories, model: mod(d.editing.params, "category")})),
+			h($select, () => ({title: "категория", options: d.categories, on: {
+				change: () => {
+					setTimeout(() => {
+						d.search = "";
+						console.log("CATEGORY", d.editing.params.category);
+						const x = toArray(d.sprites.index)
+							.filter(({value}) => value.id !== d.editing.id && value.params.category === d.editing.params.category)
+							.map(({value}) => d.sprites.order.indexOf(value.id));
+
+						console.log("x.map", x);
+						let idx = x
+							.reduce((res, val) => res == null ? val : Math.max(res, val), null) ?? -1;
+						idx++;
+						console.log("INDEX", idx);
+						const idxe = d.sprites.order.indexOf(d.editing.id);
+						d.sprites.order.splice(idxe, 1);
+						d.sprites.order.splice(idx, 0 , d.editing.id);
+					});
+				}
+			}, model: mod(d.editing.params, "category")})),
 			h($range, () => ({title: "поворот", min: -30, max: 30, model: mod(d.editing.params, "rotate")})),
 			h("label", {class: "input-title"}, "порядок"),
 			h("div", {class: ["button-group", "order-button-group"]}, h => [
@@ -482,14 +501,27 @@ async function main () {
 		category: localStorage.category || "all",
 		mode: "desktop",
 		categories: [
+			{id: "top", value: "ТОП-продавцы"},
+			{id: "undefined", value: "Неопределенности"},
+			{id: "dress", value: "Одежда, обувь и аксессуары"},
+			{id: "jewelry", value: "Украшения"},
+			{id: "business", value: "Для бизнеса"},
+			{id: "child", value: "Детские товары"},
+			{id: "health-and-beauty", value: "Красота и здоровье"},
+			{id: "auto-n-tools", value: "Инструменты и автотовары"},
+			// =====================================
 			{id: "electronic", value: "Электроника"},
 			{id: "sport", value: "Спорт"},
 			{id: "education", value: "Образование"},
 			{id: "auto", value: "Авто"},
 			{id: "home", value: "Для дома"},
 			{id: "other", value: "Другое"},
+			{id: "-", value: "--------------------"},
+			{id: "training", value: "Обучение"},
 		],
 	});
+	console.log("ABS", toArray(d.sprites.index).find(({value}) => d.sprites.order.indexOf(value.id) < 0));
+
 	reaction(async () => {
 		localStorage.category = d.category;
 	});
@@ -504,9 +536,25 @@ async function main () {
 				h($button, () => ({active: d.mode === "desktop", click: () => d.mode = "desktop"}), "Desktop"),
 			]),
 			h("div", () => ({class: classList("mainbar-content-wrapper", {mobile: d.mode})}), h => [
+				h("div", "searchbar", () => ({class: "searchbar"}), h => [
+					h("input", () => ({
+						attrs: {type: "text", placeholder: "поиск"},
+						model: {
+							set: (value) => {
+								d.search = value;
+							},
+							get: () => d.search,
+						},
+					})),
+					h($button, {click: event => {
+						const input = event.target.parentNode.querySelector("input");
+						d.search = "";
+						input.focus();
+					}}, "x"),
+				]),
 				h("div", "mainbar-content", () => ({class: classList(["mainbar-content"], {mobile: d.mode === "mobile"})}), h => [
 					...toArray(d.sprites.index.$$watch)
-						.filter(i => d.category === "all" || i.value.params.category === d.category)
+						.filter(i => (!d.search && (d.category === "all" || i.value.params.category === d.category)) || (d.search && (i?.value?.params?.url?.includes?.(d.search) || i?.value?.name?.toLowerCase?.()?.includes?.(d.search))) )
 						.sort((a, b) => d.sprites.order.indexOf(a.value.id) - d.sprites.order.indexOf(b.value.id))
 						.map(({key, value}) => {
 							const sprite = value;

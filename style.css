@@ -205,6 +205,8 @@ hr {
 	margin         : 0px auto;
 	position       : relative;
 	transition     : width 0.3s ease;
+
+	padding-top: 32px;
 }
 
 .mainbar-content.mobile {
@@ -486,4 +488,16 @@ hr {
 	top          : 50%;
 	transform    : translateY(-50%);
 	box-shadow: 0px 0px 3px 3px rgba(128, 128, 128, 0.2);
+}
+
+.searchbar {
+	display: flex;	
+	justify-content: center;	
+	padding-top: 32px;
+	gap: 6px;
+}
+.searchbar input {
+	text-align: center; 
+	width: 300px;
+	flex: 0 0 auto;
 }
