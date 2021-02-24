@@ -502,13 +502,19 @@ async function main () {
 		mode: "desktop",
 		categories: [
 			{id: "top", value: "ТОП-продавцы"},
-			{id: "undefined", value: "Неопределенности"},
-			{id: "dress", value: "Одежда, обувь и аксессуары"},
-			{id: "jewelry", value: "Украшения"},
-			{id: "business", value: "Для бизнеса"},
-			{id: "child", value: "Детские товары"},
-			{id: "health-and-beauty", value: "Красота и здоровье"},
+			{id: "electronics", value: "Электроника (new)"},
+			{id: "housing", value: "Для дома (new)"},
 			{id: "auto-n-tools", value: "Инструменты и автотовары"},
+			{id: "sport-n-hobby", value: "Спорт и увлечения"},
+			{id: "dress", value: "Одежда, обувь и аксессуары"},
+			{id: "health-and-beauty", value: "Красота и здоровье"},
+			{id: "child", value: "Детские товары"},
+			{id: "business", value: "Для бизнеса"},
+			{id: "training", value: "Обучение"},
+			{id: "jewelry", value: "Украшения"},
+			{id: "misc", value: "Другое (new)"},
+			{id: "undefined", value: "Неопределенности"},
+			{id: "--", value: "--------------------"},
 			// =====================================
 			{id: "electronic", value: "Электроника"},
 			{id: "sport", value: "Спорт"},
@@ -517,7 +523,7 @@ async function main () {
 			{id: "home", value: "Для дома"},
 			{id: "other", value: "Другое"},
 			{id: "-", value: "--------------------"},
-			{id: "training", value: "Обучение"},
+			
 		],
 	});
 	console.log("ABS", toArray(d.sprites.index).find(({value}) => d.sprites.order.indexOf(value.id) < 0));
