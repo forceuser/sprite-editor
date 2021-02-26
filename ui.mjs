@@ -243,7 +243,7 @@ const schema = {
 			return [
 				h($colorpicker, () => ({title: "Цвет", model: mod(filter, "color")})),
 				h($input, () => ({title: "padding", model: mod(filter, "padding")})),
-				h($range, () => ({title: "radius", min: 0, max: 128, step: 8, model: mod(filter, "radius")})),
+				h($range, () => ({title: "radius", min: 0, max: 512, step: 8, model: mod(filter, "radius")})),
 				h($checkbox, {title: "Квадрат", model: mod(filter, "square")}),
 				h($checkbox, {title: "Центрировать", model: mod(filter, "center")}),
 				h($checkbox, {title: "Использовать как маску", model: mod(filter, "mask")}),
@@ -434,7 +434,12 @@ function uiForParams (d, h) {
 	];
 }
 
+const SKIP_FILTERS = false;
+
 async function applyFilters (sprite) {
+	if (SKIP_FILTERS) {
+		return;
+	}
 	let srcImg = await loadImage(sprite.src.url);
 	const canvas = createCanvas(srcImg.width, srcImg.height);
 	const ctx = canvas.getContext("2d");
@@ -501,6 +506,7 @@ async function main () {
 		category: localStorage.category || "all",
 		mode: "desktop",
 		categories: [
+			{id: "-new-", value: "--------новые-------"},
 			{id: "top", value: "ТОП-продавцы"},
 			{id: "electronics", value: "Электроника (new)"},
 			{id: "housing", value: "Для дома (new)"},
@@ -514,7 +520,7 @@ async function main () {
 			{id: "jewelry", value: "Украшения"},
 			{id: "misc", value: "Другое (new)"},
 			{id: "undefined", value: "Неопределенности"},
-			{id: "--", value: "--------------------"},
+			{id: "-old-", value: "-------старые-------"},
 			// =====================================
 			{id: "electronic", value: "Электроника"},
 			{id: "sport", value: "Спорт"},
@@ -522,7 +528,7 @@ async function main () {
 			{id: "auto", value: "Авто"},
 			{id: "home", value: "Для дома"},
 			{id: "other", value: "Другое"},
-			{id: "-", value: "--------------------"},
+			{id: "-end-", value: "--------------------"},
 			
 		],
 	});
@@ -567,7 +573,16 @@ async function main () {
 							return h("div", key, () => ({
 								class: classList(["sprite-block"], {square: sprite.params.square}), 
 								style: {transform: `rotate(${sprite.params.rotate || 0}deg)`},
-								on: {click: () => editSprite(d, sprite)},					
+								on: {click: event => {
+									if (event.ctrlKey || event.metaKey) {
+										if (sprite.params.url) {
+											window.open(sprite.params.url, "_blank");
+										}
+									}
+									else {
+										editSprite(d, sprite);
+									}
+								}},					
 							}), h =>
 								h("img", null, () => (console.log("reset"), {attrs: {src: d.sprites.index[key].dest2x.url, width: d.sprites.index[key].dest2x.width}}))
 							)
