@@ -404,6 +404,7 @@ function uiForParams (d, h) {
 				}
 			}, model: mod(d.editing.params, "category")})),
 			h($range, () => ({title: "поворот", min: -30, max: 30, model: mod(d.editing.params, "rotate")})),
+			h($checkbox, () => ({title: "скрыть", model: mod(d.editing, "disabled")})),
 			h("label", {class: "input-title"}, "порядок"),
 			h("div", {class: ["button-group", "order-button-group"]}, h => [
 				h($button, {click: () => {
@@ -428,6 +429,7 @@ function uiForParams (d, h) {
 					d.sprites.order.splice(Math.min(d.sprites.order.length, idx + 1), 0 , d.editing.id);
 				}}, "›"),
 			]),
+
 			h($button, {click: () => removeSprite(d, d.editing)}, "Удалить"),
 			h($button, {click: () => reloadSpriteImage(d, d.editing)}, "Заменить изображение"),
 		])
@@ -566,13 +568,16 @@ async function main () {
 				]),
 				h("div", "mainbar-content", () => ({class: classList(["mainbar-content"], {mobile: d.mode === "mobile"})}), h => [
 					...toArray(d.sprites.index.$$watch)
-						.filter(i => (!d.search && (d.category === "all" || i.value.params.category === d.category)) || (d.search && (i?.value?.params?.url?.includes?.(d.search) || i?.value?.name?.toLowerCase?.()?.includes?.(d.search))) )
+						.filter(i => 
+							(!d.search && (d.category === "all" || i.value.params.category === d.category) && (!d.hideDisabled || !i.value.disabled)) 
+							|| (d.search && (i?.value?.params?.url?.includes?.(d.search) || i?.value?.name?.toLowerCase?.()?.includes?.(d.search))) 
+						)
 						.sort((a, b) => d.sprites.order.indexOf(a.value.id) - d.sprites.order.indexOf(b.value.id))
 						.map(({key, value}) => {
 							const sprite = value;
 							return h("div", key, () => ({
 								class: classList(["sprite-block"], {square: sprite.params.square}), 
-								style: {transform: `rotate(${sprite.params.rotate || 0}deg)`},
+								style: {transform: `rotate(${sprite.params.rotate || 0}deg)`, opacity: sprite.disabled ? 0.5 : 1},
 								on: {click: event => {
 									if (event.ctrlKey || event.metaKey) {
 										if (sprite.params.url) {
@@ -600,6 +605,7 @@ async function main () {
 					options: [{id: "all", value: "все"}, 
 					...d.categories
 				]})),
+				h($checkbox, () => ({title: "Не показывать скрытые", model: mod(d, "hideDisabled")})),
 				h($button, {
 					click: async () => {
 						let sprites = await loadDataFromFile();											
