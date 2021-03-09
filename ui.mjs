@@ -4,6 +4,7 @@ import {loadDataFromFile, saveDataToFile, convertSprites, crop, roundRect, round
 import {h, observable, reaction, cacheable, ViewComponent, classList} from "./view.mjs";
 import {imageToCanvas, loadImage, createCanvas, toDPR, copyCanvas, Rect, doPadding} from "./graphics.mjs";
 import {openFile, readFile, clone, each, toArray, uuid} from "./common.mjs";
+import {transform as tlTransform} from "./translit.mjs";
 
 class $select extends ViewComponent {
 	view (h, d) {
@@ -314,7 +315,8 @@ async function reloadSpriteImage (d, sprite) {
 	const file = files[0];
 	const url = await readFile(file, "blobUrl");
 	const img = await loadImage(url, {width: width * dpr});
-	const name = (file.name || "").replace(/([^\/\\]+)$/, "$1").split(".")[0];
+	let name = (file.name || "").replace(/([^\/\\]+)$/, "$1").split(".")[0];
+	name = tlTransform({input: name.replace(/^.*\:\/\//, "").replace(/[.,+=:_\s]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase(), preset: "uk"})
 	// console.log("sprite.src", sprite.src);
 	sprite.src = {url: imageToCanvas(img).toDataURL("image/png"), w: img.width, h: img.height};
 	applyFilters(sprite);
@@ -379,9 +381,13 @@ function uiForParams (d, h) {
 		h("section", "param-section", {class: ["param-section"]}, h => [					
 			// h($input, () => ({title: "id", model: mod(d.editing, "id")})),
 			h($input, () => ({title: "имя", model: mod(d.editing, "name")})),
+			h($input, () => ({title: "имя2", model: mod(d.editing.params, "name2"), on: {input: event => {
+				const val = event.target.value || "";
+				d.editing.name = tlTransform({input: val.replace(/^.*\:\/\//, "").replace(/[.,+=:_\s]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase(), preset: "uk"});
+			}}})),
 			h($input, () => ({title: "url", model: mod(d.editing.params, "url"), on: {input: event => {
 				const val = event.target.value || "";
-				d.editing.name = val.replace(/^.*\:\/\//, "").replace(/[.,+=:_]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase();
+				d.editing.name = val.replace(/^.*\:\/\//, "").replace(/[.,+=:_\s]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase();
 			}}})),
 			h($select, () => ({title: "категория", options: d.categories, on: {
 				change: () => {
@@ -476,7 +482,8 @@ async function editSprite (d, sprite) {
 		const file = files[0];
 		const url = await readFile(file, "blobUrl");
 		const img = await loadImage(url, {width: width * dpr});
-		const name = (file.name || "").replace(/([^\/\\]+)$/, "$1").split(".")[0];
+		let name = (file.name || "").replace(/([^\/\\]+)$/, "$1").split(".")[0];
+	name = tlTransform({input: name.replace(/^.*\:\/\//, "").replace(/[.,+=:_\s]+/g, "-").replace(/[-]+/, "-").replace(/[?#&/]+/g, "--").replace(/[-]+$/g, "").toLowerCase(), preset: "uk"})
 		sprite = {
 			id: (++d.sprites.id).toString(),
 			name,
@@ -503,15 +510,15 @@ async function editSprite (d, sprite) {
 
 async function main () {
 	const sprites = await convertSprites(await dataStore.load());
+	console.log("sprites", sprites);
 	const d = observable({
 		sprites,
 		category: localStorage.category || "all",
 		mode: "desktop",
-		categories: [
-			{id: "-new-", value: "--------новые-------"},
+		categories: sprites.categories || [			
 			{id: "top", value: "ТОП-продавцы"},
-			{id: "electronics", value: "Электроника (new)"},
-			{id: "housing", value: "Для дома (new)"},
+			{id: "electronics", value: "Электроника"},
+			{id: "housing", value: "Для дома"},
 			{id: "auto-n-tools", value: "Инструменты и автотовары"},
 			{id: "sport-n-hobby", value: "Спорт и увлечения"},
 			{id: "dress", value: "Одежда, обувь и аксессуары"},
@@ -520,18 +527,8 @@ async function main () {
 			{id: "business", value: "Для бизнеса"},
 			{id: "training", value: "Обучение"},
 			{id: "jewelry", value: "Украшения"},
-			{id: "misc", value: "Другое (new)"},
+			{id: "misc", value: "Другое"},
 			{id: "undefined", value: "Неопределенности"},
-			{id: "-old-", value: "-------старые-------"},
-			// =====================================
-			{id: "electronic", value: "Электроника"},
-			{id: "sport", value: "Спорт"},
-			{id: "education", value: "Образование"},
-			{id: "auto", value: "Авто"},
-			{id: "home", value: "Для дома"},
-			{id: "other", value: "Другое"},
-			{id: "-end-", value: "--------------------"},
-			
 		],
 	});
 	console.log("ABS", toArray(d.sprites.index).find(({value}) => d.sprites.order.indexOf(value.id) < 0));
