@@ -1,0 +1,31 @@
+{
+	"name": "sprite-editor",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"init-dev": "npx va-nginx-admin add --id sprite-editor sprite-editor.loc 8121",
+		"start": "browser-sync start --config './browser-sync.js'",
+		"dev": "run-p start openx",
+		"openx": "open-cli 'https://sprite-editor.loc'",
+		"serve": "npm start",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"release": "git add --all && git commit -am 'wip' && git push"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/forceuser/sprite-editor.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/forceuser/sprite-editor/issues"
+	},
+	"homepage": "https://github.com/forceuser/sprite-editor#readme",
+	"devDependencies": {
+		"browser-sync": "^2.26.14",
+		"npm-run-all": "^4.1.5",
+		"open": "^8.0.4",
+		"open-cli": "^6.0.1"
+	}
+}
